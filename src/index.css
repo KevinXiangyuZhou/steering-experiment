@@ -1,0 +1,69 @@
+/* --- Tailwind layers --- */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* --- Custom CSS Variables for Colors --- */
+@layer base {
+  :root {
+    --color-success: #00FF00;
+    --color-warning: #FFFF00;
+    --color-danger: #FF0000;
+  }
+}
+
+/* --- Explicit Color Classes --- */
+@layer utilities {
+  .bg-gray-100 { background-color: #f3f4f6; }
+  .bg-gray-300 { background-color: #d1d5db; }
+  .bg-gray-500 { background-color: #6b7280; }
+  .bg-gray-700 { background-color: #374151; }
+  .bg-white { background-color: #ffffff; }
+  .bg-black { background-color: #000000; }
+  .bg-red-500 { background-color: #ef4444; }
+  .bg-red-600 { background-color: #dc2626; }
+  .bg-green-500 { background-color: #10b981; }
+  .bg-green-600 { background-color: #059669; }
+  .bg-yellow-500 { background-color: #f59e0b; }
+  .bg-blue-500 { background-color: #3b82f6; }
+  .bg-blue-700 { background-color: #1d4ed8; }
+  .bg-purple-600 { background-color: #9333ea; }
+  .bg-opacity-50 { background-color: rgba(0, 0, 0, 0.5); }
+  
+  /* Custom colors for time bar */
+  .bg-success { background-color: var(--color-success, #00FF00); }
+  .bg-warning { background-color: var(--color-warning, #FFFF00); }
+  .bg-danger { background-color: var(--color-danger, #FF0000); }
+  
+  .text-gray-500 { color: #6b7280; }
+  .text-gray-600 { color: #4b5563; }
+  .text-gray-700 { color: #374151; }
+  .text-red-600 { color: #dc2626; }
+  .text-green-600 { color: #059669; }
+  .text-blue-600 { color: #2563eb; }
+  .text-purple-600 { color: #9333ea; }
+  .text-white { color: #ffffff; }
+  
+  .hover\:bg-blue-700:hover { background-color: #1d4ed8; }
+}
+
+/* --- Global defaults --- */
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Optional: keep link styling */
+a {
+  font-weight: 500;
+  text-decoration: none;
+}
+
+/* Optional: buttons (but you can also use Tailwind classes instead) */
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
