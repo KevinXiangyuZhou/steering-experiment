@@ -618,7 +618,7 @@ const HumanSteeringExperiment = () => {
         return (
           <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
             <div className="bg-white rounded-lg shadow-lg p-12 text-center">
-              <h1 className="text-3xl font-bold mb-6">Human Steering Experiment v2.1</h1>
+              <h1 className="text-3xl font-bold mb-6">Human Steering Experiment</h1>
               <p className="mb-6 text-gray-600">Press ENTER to continue</p>
             </div>
           </div>
@@ -700,16 +700,6 @@ const HumanSteeringExperiment = () => {
             <div className="bg-white rounded-lg shadow-lg p-6">
               {/* Time bar container - always reserve space when in time-related phases */}
               <div className="mb-4 w-full max-w-md mx-auto" style={{ minHeight: shouldShowTimerArea() ? '44px' : '0px' }}>
-                {/* Debug info - shows current state */}
-                <div className="text-xs text-gray-500 mb-2 p-2 bg-gray-100 rounded">
-                  <div>Phase: {phase}</div>
-                  <div>TimeLimit: {timeLimit}</div>
-                  <div>TrialState: {trialState}</div>
-                  <div>TimeRemaining: {timeRemaining}</div>
-                  <div>Should show timer: {shouldShowTimerArea() ? 'YES' : 'NO'}</div>
-                  <div>All conditions met: {(phase === ExperimentPhase.TIME_TRIAL_PRACTICE && timeLimit && trialState === TrialState.IN_PROGRESS) ? 'YES' : 'NO'}</div>
-                </div>
-                
                 {phase === ExperimentPhase.TIME_TRIAL_PRACTICE && 
                  timeLimit && trialState === TrialState.IN_PROGRESS && (
                   <>
@@ -717,10 +707,10 @@ const HumanSteeringExperiment = () => {
                     <div
                       className={`h-full transition-all duration-100 ${
                         timeRemaining / timeLimit > 0.5
-                          ? 'bg-success'
+                          ? 'bg-green-500'
                           : timeRemaining / timeLimit > 0.2
-                          ? 'bg-warning'
-                          : 'bg-danger'
+                          ? 'bg-yellow-500'
+                          : 'bg-red-500'
                       }`}
                       style={{ width: `${Math.max(0, timeRemaining / timeLimit) * 100}%` }}
                     />
@@ -728,7 +718,6 @@ const HumanSteeringExperiment = () => {
                   <div className="text-center text-sm mt-1 font-mono">
                     {timeRemaining.toFixed(1)}s / {timeLimit.toFixed(1)}s
                   </div>
-
                   </>
                 )}
               </div>
