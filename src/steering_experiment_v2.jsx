@@ -22,26 +22,26 @@ const TrialState = {
 
 // Trial conditions
 const BASIC_CONDITIONS = [
-  { id: 1, tunnelWidth: 0.015, curvature: 0.01, timeLimit: null, description: "narrow tunnel, gentle curve" },
-  { id: 2, tunnelWidth: 0.015, curvature: 0.03, timeLimit: null, description: "narrow tunnel, moderate curve" },
-  { id: 3, tunnelWidth: 0.015, curvature: 0.05, timeLimit: null, description: "narrow tunnel, sharp curve" },
-  { id: 4, tunnelWidth: 0.025, curvature: 0.01, timeLimit: null, description: "medium tunnel, gentle curve" },
-  { id: 5, tunnelWidth: 0.025, curvature: 0.03, timeLimit: null, description: "medium tunnel, moderate curve" },
-  { id: 6, tunnelWidth: 0.025, curvature: 0.05, timeLimit: null, description: "medium tunnel, sharp curve" },
-  { id: 7, tunnelWidth: 0.03, curvature: 0.01, timeLimit: null, description: "wide tunnel, gentle curve" },
-  { id: 8, tunnelWidth: 0.03, curvature: 0.03, timeLimit: null, description: "wide tunnel, moderate curve" },
+  // { id: 1, tunnelWidth: 0.015, curvature: 0.01, timeLimit: null, description: "narrow tunnel, gentle curve" },
+  // { id: 2, tunnelWidth: 0.015, curvature: 0.03, timeLimit: null, description: "narrow tunnel, moderate curve" },
+  // { id: 3, tunnelWidth: 0.015, curvature: 0.05, timeLimit: null, description: "narrow tunnel, sharp curve" },
+  // { id: 4, tunnelWidth: 0.025, curvature: 0.01, timeLimit: null, description: "medium tunnel, gentle curve" },
+  // { id: 5, tunnelWidth: 0.025, curvature: 0.03, timeLimit: null, description: "medium tunnel, moderate curve" },
+  // { id: 6, tunnelWidth: 0.025, curvature: 0.05, timeLimit: null, description: "medium tunnel, sharp curve" },
+  // { id: 7, tunnelWidth: 0.03, curvature: 0.01, timeLimit: null, description: "wide tunnel, gentle curve" },
+  // { id: 8, tunnelWidth: 0.03, curvature: 0.03, timeLimit: null, description: "wide tunnel, moderate curve" },
   { id: 9, tunnelWidth: 0.03, curvature: 0.05, timeLimit: null, description: "wide tunnel, sharp curve" },
 ];
 
 const TIME_CONDITIONS = [
-  { id: 10, tunnelWidth: 0.025, curvature: 0.01, timeLimit: 6.0, description: "narrow tunnel, gentle curve, 6s limit" },
-  { id: 11, tunnelWidth: 0.025, curvature: 0.01, timeLimit: 4.0, description: "narrow tunnel, gentle curve, 4s limit" },
-  { id: 12, tunnelWidth: 0.025, curvature: 0.01, timeLimit: 2.0, description: "narrow tunnel, gentle curve, 2s limit" },
-  { id: 13, tunnelWidth: 0.025, curvature: 0.03, timeLimit: 6.0, description: "narrow tunnel, moderate curve, 6s limit" },
-  { id: 14, tunnelWidth: 0.025, curvature: 0.03, timeLimit: 4.0, description: "narrow tunnel, moderate curve, 4s limit" },
-  { id: 15, tunnelWidth: 0.025, curvature: 0.03, timeLimit: 2.0, description: "narrow tunnel, moderate curve, 2s limit" },
-  { id: 16, tunnelWidth: 0.025, curvature: 0.05, timeLimit: 8.0, description: "narrow tunnel, sharp curve, 8s limit" },
-  { id: 17, tunnelWidth: 0.025, curvature: 0.05, timeLimit: 6.0, description: "narrow tunnel, sharp curve, 6s limit" },
+  // { id: 10, tunnelWidth: 0.025, curvature: 0.01, timeLimit: 6.0, description: "narrow tunnel, gentle curve, 6s limit" },
+  // { id: 11, tunnelWidth: 0.025, curvature: 0.01, timeLimit: 4.0, description: "narrow tunnel, gentle curve, 4s limit" },
+  // { id: 12, tunnelWidth: 0.025, curvature: 0.01, timeLimit: 2.0, description: "narrow tunnel, gentle curve, 2s limit" },
+  // { id: 13, tunnelWidth: 0.025, curvature: 0.03, timeLimit: 6.0, description: "narrow tunnel, moderate curve, 6s limit" },
+  // { id: 14, tunnelWidth: 0.025, curvature: 0.03, timeLimit: 4.0, description: "narrow tunnel, moderate curve, 4s limit" },
+  // { id: 15, tunnelWidth: 0.025, curvature: 0.03, timeLimit: 2.0, description: "narrow tunnel, moderate curve, 2s limit" },
+  // { id: 16, tunnelWidth: 0.025, curvature: 0.05, timeLimit: 8.0, description: "narrow tunnel, sharp curve, 8s limit" },
+  // { id: 17, tunnelWidth: 0.025, curvature: 0.05, timeLimit: 6.0, description: "narrow tunnel, sharp curve, 6s limit" },
   { id: 18, tunnelWidth: 0.025, curvature: 0.05, timeLimit: 4.0, description: "narrow tunnel, sharp curve, 4s limit" },
 ];
 
@@ -523,7 +523,7 @@ const HumanSteeringExperiment = () => {
     ctx.fillStyle = '#000000';
     ctx.font = '12px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText('START', x, y + 4);
+    // ctx.fillText('START', x, y + 4);
   };
 
   const drawTarget = (ctx) => {
@@ -657,35 +657,39 @@ const HumanSteeringExperiment = () => {
             <div className="bg-white rounded-lg shadow-lg p-6">
               {/* Time bar container - always reserve space when in time-related phases */}
               <div className="mb-4 w-full max-w-md mx-auto">
+                
                 {phase === ExperimentPhase.TIME_TRIAL_PRACTICE && timeLimit && (
-                  <div className="w-full">
+                  <div style={{width: '100%'}}>
                     {/* Timer bar background */}
-                    <div className="w-full h-8 bg-gray-300 rounded-lg overflow-hidden mb-2 relative">
+                    <div style={{
+                      width: '100%', 
+                      height: '32px', 
+                      backgroundColor: '#d1d5db', 
+                      borderRadius: '8px', 
+                      overflow: 'hidden', 
+                      marginBottom: '8px', 
+                      position: 'relative'
+                    }}>
                       {/* Timer bar fill */}
                       <div
-                        className="h-full transition-all duration-100 absolute top-0 left-0"
                         style={{ 
-                          backgroundColor: trialState !== TrialState.IN_PROGRESS 
-                            ? '#3b82f6'  // blue-500
-                            : timeRemaining / timeLimit > 0.5
+                          height: '100%',
+                          position: 'absolute',
+                          top: '0',
+                          left: '0',
+                          transition: 'all 0.1s',
+                          backgroundColor: trialState !== TrialState.IN_PROGRESS
                             ? '#10b981'  // green-500
-                            : timeRemaining / timeLimit > 0.2
+                            : (timeRemaining / timeLimit) > 0.2
                             ? '#f59e0b'  // yellow-500
                             : '#ef4444', // red-500
                           width: `${
-                            trialState !== TrialState.IN_PROGRESS 
+                            trialState !== TrialState.IN_PROGRESS
                               ? 100 
                               : Math.max(0, (timeRemaining / timeLimit) * 100)
                           }%` 
                         }}
                       />
-                    </div>
-                    {/* Timer text */}
-                    <div className="text-center text-lg font-bold" style={{ color: '#374151' }}>
-                      {trialState === TrialState.IN_PROGRESS 
-                        ? `${timeRemaining.toFixed(1)}s / ${timeLimit.toFixed(1)}s`
-                        : `Time limit: ${timeLimit.toFixed(1)}s (Click START to begin)`
-                      }
                     </div>
                   </div>
                 )}
@@ -735,23 +739,23 @@ const HumanSteeringExperiment = () => {
     
     // Show phase and trial info
     if (phase === ExperimentPhase.PRACTICE) {
-      statusText = "PRACTICE MODE";
+      statusText = "PRACTICE ROUND";
       statusColor = "text-green-600";
     } else if (phase === ExperimentPhase.MAIN_TRIALS && currentTrial < currentConditions.length) {
       statusText = `Trial ${currentTrial + 1}/${currentConditions.length}: ${currentConditions[currentTrial].description}`;
       statusColor = "text-blue-600";
     } else if (phase === ExperimentPhase.TIME_TRIAL_PRACTICE && currentPracticeCondition) {
-      statusText = `PRACTICE FOR: ${currentPracticeCondition.description}`;
+      statusText = `PRACTICE ROUND`;
       statusColor = "text-purple-600";
     } else if (phase === ExperimentPhase.TIME_TRIALS && currentTrial < currentConditions.length) {
-      statusText = `Time Trial ${currentTrial + 1}/${currentConditions.length}: ${currentConditions[currentTrial].description}`;
+      statusText = `Timed Trial ${currentTrial + 1}/${currentConditions.length}`;
       statusColor = "text-red-600";
     }
     
     // Add current state
     let stateText = "";
     if (trialState === TrialState.WAITING_FOR_START) {
-      stateText = "Click the green START button to begin";
+      stateText = "Click the green button to begin";
     } else if (trialState === TrialState.IN_PROGRESS) {
       stateText = "Navigate to the red target";
     }
@@ -767,10 +771,10 @@ const HumanSteeringExperiment = () => {
   const renderSimpleControls = () => {
     const controls = [];
     
-    controls.push("Press R to restart trial");
+    controls.push("Press 'R' to restart trial");
     
     if (phase === ExperimentPhase.PRACTICE || phase === ExperimentPhase.TIME_TRIAL_PRACTICE) {
-      controls.push("Press N to continue to next phase");
+      controls.push("Press 'N' to continue to next phase");
     }
     
     return (
