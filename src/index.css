@@ -29,6 +29,20 @@
   .bg-blue-700 { background-color: #1d4ed8; }
   .bg-purple-600 { background-color: #9333ea; }
   .bg-opacity-50 { background-color: rgba(0, 0, 0, 0.5); }
+  .bg-blue-400 { background-color: #60a5fa; }
+  .bg-gray-500 { background-color: #6b7280; }
+  .bg-gray-700 { background-color: #374151; }
+  .bg-white { background-color: #ffffff; }
+  .bg-black { background-color: #000000; }
+  .bg-red-500 { background-color: #ef4444; }
+  .bg-red-600 { background-color: #dc2626; }
+  .bg-green-500 { background-color: #10b981; }
+  .bg-green-600 { background-color: #059669; }
+  .bg-yellow-500 { background-color: #f59e0b; }
+  .bg-blue-500 { background-color: #3b82f6; }
+  .bg-blue-700 { background-color: #1d4ed8; }
+  .bg-purple-600 { background-color: #9333ea; }
+  .bg-opacity-50 { background-color: rgba(0, 0, 0, 0.5); }
   
   /* Custom colors for time bar */
   .bg-success { background-color: var(--color-success, #00FF00); }

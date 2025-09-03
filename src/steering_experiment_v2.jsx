@@ -9,7 +9,6 @@ const ExperimentPhase = {
   TIME_CONSTRAINT_INTRO: 'time_constraint_intro',
   TIME_TRIAL_PRACTICE: 'time_trial_practice',
   TIME_TRIALS: 'time_trials',
-  BREAK: 'break',
   COMPLETE: 'complete'
 };
 
@@ -135,33 +134,7 @@ const HumanSteeringExperiment = () => {
     setFailedDueToTimeout(false);
   }, [generateTunnelPath]);
 
-  // Fixed function that can handle explicit parameters
-  const checkAndStartTimeTrialWithParams = useCallback((trialNum, conditions, practiced) => {
-    if (trialNum >= conditions.length) {
-      setPhase(ExperimentPhase.COMPLETE);
-      return;
-    }
-    
-    const condition = conditions[trialNum];
-    const conditionKey = `${condition.curvature}-${condition.timeLimit}`;
-    
-    if (!practiced.has(conditionKey)) {
-      // Don't mark as practiced yet - will be marked after successful completion
-      setPhase(ExperimentPhase.TIME_TRIAL_PRACTICE);
-      setCurrentPracticeCondition(condition);
-      setIsPractice(true);
-      setupTrial(condition);
-    } else {
-      setPhase(ExperimentPhase.TIME_TRIALS);
-      setIsPractice(false);
-      setupTrial(condition);
-    }
-  }, [setupTrial]);
 
-  // Original function for use with current state
-  const checkAndStartTimeTrial = useCallback(() => {
-    checkAndStartTimeTrialWithParams(currentTrial, currentConditions, practicedConditions);
-  }, [currentTrial, currentConditions, practicedConditions, checkAndStartTimeTrialWithParams]);
 
   // Handle keyboard events
   useEffect(() => {
@@ -204,14 +177,21 @@ const HumanSteeringExperiment = () => {
         
         case ExperimentPhase.TIME_CONSTRAINT_INTRO:
           if (event.key === ' ') {
-            // Go directly to time trials (which will trigger individual practice)
+            // Set up for time trials
             const newConditions = [...TIME_CONDITIONS];
-            const newPracticed = new Set();
             setCurrentTrial(0);
             setCurrentConditions(newConditions);
-            setPracticedConditions(newPracticed);
-            // This will check if first condition needs practice
-            checkAndStartTimeTrialWithParams(0, newConditions, newPracticed);
+            setPracticedConditions(new Set());
+            
+            // Check if first condition needs practice (it always will since we cleared practiced conditions)
+            const firstCondition = newConditions[0];
+            const conditionKey = `${firstCondition.curvature}-${firstCondition.timeLimit}`;
+            
+            // Start with practice for first time trial
+            setPhase(ExperimentPhase.TIME_TRIAL_PRACTICE);
+            setCurrentPracticeCondition(firstCondition);
+            setIsPractice(true);
+            setupTrial(firstCondition);
           }
           break;
         
@@ -219,11 +199,11 @@ const HumanSteeringExperiment = () => {
           if (event.key === 'r') {
             setupTrial(currentPracticeCondition);
           } else if (event.key === 'n') {
-            // Mark this condition as practiced after successful completion
+            // Mark this condition as practiced
             const conditionKey = `${currentPracticeCondition.curvature}-${currentPracticeCondition.timeLimit}`;
             setPracticedConditions(prev => new Set([...prev, conditionKey]));
             
-            // Now move to the actual trial
+            // Move to the actual trial for the CURRENT trial number (don't increment)
             setPhase(ExperimentPhase.TIME_TRIALS);
             setIsPractice(false);
             setupTrial(currentConditions[currentTrial]);
@@ -235,31 +215,12 @@ const HumanSteeringExperiment = () => {
             setupTrial(currentConditions[currentTrial]);
           }
           break;
-        
-        case ExperimentPhase.BREAK:
-          if (event.key === ' ') {
-            continueAfterBreak();
-          }
-          break;
       }
     };
 
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [phase, currentTrial, currentConditions, currentPracticeCondition, participantId, setupTrial, checkAndStartTimeTrialWithParams]);
-
-  const continueAfterBreak = useCallback(() => {
-    if (currentConditions.length === BASIC_CONDITIONS.length) {
-      setPhase(ExperimentPhase.MAIN_TRIALS);
-      setupTrial(currentConditions[currentTrial]);
-    } else {
-      // Get fresh reference to practiced conditions for time trials
-      setPracticedConditions(currentPracticed => {
-        checkAndStartTimeTrialWithParams(currentTrial, currentConditions, currentPracticed);
-        return currentPracticed;
-      });
-    }
-  }, [currentConditions, currentTrial, setupTrial, checkAndStartTimeTrialWithParams]);
+  }, [phase, currentTrial, currentConditions, currentPracticeCondition, participantId, setupTrial]);
 
   // Handle mouse events
   const handleMouseClick = (event) => {
@@ -467,15 +428,24 @@ const HumanSteeringExperiment = () => {
       return;
     }
     
-    if (nextTrial % 5 === 0) {
-      setPhase(ExperimentPhase.BREAK);
-    } else {
-      if (phase === ExperimentPhase.TIME_TRIALS) {
-        // Use the callback version to ensure we have the updated currentTrial value
-        setTimeout(() => checkAndStartTimeTrial(), 0);
+    // Continue directly to next trial without breaks
+    if (phase === ExperimentPhase.TIME_TRIALS) {
+      // For time trials, check if the next condition needs practice
+      const nextCondition = currentConditions[nextTrial];
+      const conditionKey = `${nextCondition.curvature}-${nextCondition.timeLimit}`;
+      
+      if (!practicedConditions.has(conditionKey)) {
+        setPhase(ExperimentPhase.TIME_TRIAL_PRACTICE);
+        setCurrentPracticeCondition(nextCondition);
+        setIsPractice(true);
+        setupTrial(nextCondition);
       } else {
-        setupTrial(currentConditions[nextTrial]);
+        setPhase(ExperimentPhase.TIME_TRIALS);
+        setIsPractice(false);
+        setupTrial(nextCondition);
       }
+    } else {
+      setupTrial(currentConditions[nextTrial]);
     }
   };
 
@@ -661,18 +631,7 @@ const HumanSteeringExperiment = () => {
           </div>
         );
 
-      case ExperimentPhase.BREAK:
-        const phaseName = currentConditions.length === BASIC_CONDITIONS.length ? "Basic Trials" : "Time Trials";
-        return (
-          <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
-            <div className="bg-white rounded-lg shadow-lg p-12 text-center">
-              <h2 className="text-2xl font-bold text-red-600 mb-6">Break Time!</h2>
-              <p className="mb-2">Completed {currentTrial} of {currentConditions.length} {phaseName}</p>
-              <p className="mb-6">Take a moment to rest.</p>
-              <p className="font-semibold">Press SPACEBAR to continue</p>
-            </div>
-          </div>
-        );
+
 
       case ExperimentPhase.COMPLETE:
         return (
@@ -680,8 +639,6 @@ const HumanSteeringExperiment = () => {
             <div className="bg-white rounded-lg shadow-lg p-12 text-center">
               <h2 className="text-2xl font-bold text-green-600 mb-6">Experiment Complete!</h2>
               <p className="mb-6">All trials completed successfully!</p>
-              <p className="mb-4">Total trials completed: {trialData.length}</p>
-              <p className="mb-6">Expected: {BASIC_CONDITIONS.length + TIME_CONDITIONS.length} trials</p>
               <button
                 onClick={downloadData}
                 className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mb-4"
@@ -699,26 +656,38 @@ const HumanSteeringExperiment = () => {
           <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4">
             <div className="bg-white rounded-lg shadow-lg p-6">
               {/* Time bar container - always reserve space when in time-related phases */}
-              <div className="mb-4 w-full max-w-md mx-auto" style={{ minHeight: shouldShowTimerArea() ? '44px' : '0px' }}>
-                {phase === ExperimentPhase.TIME_TRIAL_PRACTICE && 
-                 timeLimit && trialState === TrialState.IN_PROGRESS && (
-                  <>
-                   <div className="w-full h-4 bg-gray-300 rounded-lg overflow-hidden">
-                    <div
-                      className={`h-full transition-all duration-100 ${
-                        timeRemaining / timeLimit > 0.5
-                          ? 'bg-green-500'
-                          : timeRemaining / timeLimit > 0.2
-                          ? 'bg-yellow-500'
-                          : 'bg-red-500'
-                      }`}
-                      style={{ width: `${Math.max(0, timeRemaining / timeLimit) * 100}%` }}
-                    />
+              <div className="mb-4 w-full max-w-md mx-auto">
+                {phase === ExperimentPhase.TIME_TRIAL_PRACTICE && timeLimit && (
+                  <div className="w-full">
+                    {/* Timer bar background */}
+                    <div className="w-full h-8 bg-gray-300 rounded-lg overflow-hidden mb-2 relative">
+                      {/* Timer bar fill */}
+                      <div
+                        className="h-full transition-all duration-100 absolute top-0 left-0"
+                        style={{ 
+                          backgroundColor: trialState !== TrialState.IN_PROGRESS 
+                            ? '#3b82f6'  // blue-500
+                            : timeRemaining / timeLimit > 0.5
+                            ? '#10b981'  // green-500
+                            : timeRemaining / timeLimit > 0.2
+                            ? '#f59e0b'  // yellow-500
+                            : '#ef4444', // red-500
+                          width: `${
+                            trialState !== TrialState.IN_PROGRESS 
+                              ? 100 
+                              : Math.max(0, (timeRemaining / timeLimit) * 100)
+                          }%` 
+                        }}
+                      />
+                    </div>
+                    {/* Timer text */}
+                    <div className="text-center text-lg font-bold" style={{ color: '#374151' }}>
+                      {trialState === TrialState.IN_PROGRESS 
+                        ? `${timeRemaining.toFixed(1)}s / ${timeLimit.toFixed(1)}s`
+                        : `Time limit: ${timeLimit.toFixed(1)}s (Click START to begin)`
+                      }
+                    </div>
                   </div>
-                  <div className="text-center text-sm mt-1 font-mono">
-                    {timeRemaining.toFixed(1)}s / {timeLimit.toFixed(1)}s
-                  </div>
-                  </>
                 )}
               </div>
               
