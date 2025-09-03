@@ -71,6 +71,8 @@ const HumanSteeringExperiment = () => {
   const [speedHistory, setSpeedHistory] = useState([]);
   const [timestampHistory, setTimestampHistory] = useState([]);
   const [excursionEvents, setExcursionEvents] = useState([]);
+  const [excursionMarkers, setExcursionMarkers] = useState([]); // New: markers for boundary excursions
+  const [hasExcursionMarker, setHasExcursionMarker] = useState(false); // Track if excursion already marked
 
   // Environment state
   const [cursorPos, setCursorPos] = useState({ x: 0, y: 0 });
@@ -91,6 +93,16 @@ const HumanSteeringExperiment = () => {
   const START_BUTTON_RADIUS = 0.008;
   const TARGET_RADIUS = 0.01;
   const TUNNEL_STEP = 0.002;
+
+  // Check if current phase should enforce boundary constraints (interrupt on violation)
+  const shouldEnforceBoundaries = useCallback(() => {
+    return phase === ExperimentPhase.MAIN_TRIALS;
+  }, [phase]);
+
+  // Check if current phase should mark boundary violations (but not interrupt)
+  const shouldMarkBoundaries = useCallback(() => {
+    return phase === ExperimentPhase.PRACTICE || phase === ExperimentPhase.MAIN_TRIALS;
+  }, [phase]);
 
   // Generate tunnel path
   const generateTunnelPath = useCallback((curvature) => {
@@ -128,13 +140,13 @@ const HumanSteeringExperiment = () => {
     setSpeedHistory([]);
     setTimestampHistory([]);
     setExcursionEvents([]);
+    setExcursionMarkers([]); // Clear excursion markers
+    setHasExcursionMarker(false); // Reset excursion marker flag
     setTrialStartTime(0);
     setLastMousePos(null);
     setTimeRemaining(condition.timeLimit || 0);
     setFailedDueToTimeout(false);
   }, [generateTunnelPath]);
-
-
 
   // Handle keyboard events
   useEffect(() => {
@@ -273,14 +285,28 @@ const HumanSteeringExperiment = () => {
     setCursorPos({ x, y });
     setCursorVel(velocity);
     
-    // Record data immediately when position updates (this is the key fix)
+    // Record data immediately when position updates
     const speed = Math.sqrt(velocity.x ** 2 + velocity.y ** 2);
     setTrajectoryPoints(prev => [...prev, { x, y }]);
     setSpeedHistory(prev => [...prev, speed]);
     setTimestampHistory(prev => [...prev, currentTime]);
     
-    // Check for excursions
-    checkTunnelExcursions(x, y);
+         // Check for excursions and mark them
+     if (shouldMarkBoundaries()) {
+       const excursionResult = checkTunnelExcursions(x, y);
+       if (excursionResult.isExcursion && !hasExcursionMarker) {
+         // Add marker at boundary location (only once per trial)
+         setExcursionMarkers([excursionResult.boundaryPoint]);
+         setHasExcursionMarker(true);
+         
+         // Only interrupt trial if boundaries are enforced (main trials, not practice)
+         if (shouldEnforceBoundaries()) {
+           setTrialState(TrialState.FAILED);
+           return; // Don't continue processing this movement
+         }
+         // In practice mode, just mark the excursion and continue
+       }
+     }
     
     // Check for trial completion
     const targetDist = Math.sqrt((x - targetPos.x) ** 2 + (y - targetPos.y) ** 2);
@@ -307,7 +333,7 @@ const HumanSteeringExperiment = () => {
     setCursorPos(startPos);
     setCursorVel({ x: 0, y: 0 });
     
-    // Record initial data point (this was missing)
+    // Record initial data point
     setTrajectoryPoints([startPos]);
     setSpeedHistory([0]);
     setTimestampHistory([startTime]);
@@ -316,33 +342,6 @@ const HumanSteeringExperiment = () => {
     setLastMousePos(startPos);
     lastTimeRef.current = startTime;
   };
-
-  // // Update trial state and timer
-  // useEffect(() => {
-  //   if (trialState !== TrialState.IN_PROGRESS) return;
-    
-  //   const updateTrial = () => {
-  //     const currentTime = Date.now();
-      
-  //     // Record data
-  //     const speed = Math.sqrt(cursorVel.x ** 2 + cursorVel.y ** 2);
-  //     setTrajectoryPoints(prev => [...prev, { ...cursorPos }]);
-  //     setSpeedHistory(prev => [...prev, speed]);
-  //     setTimestampHistory(prev => [...prev, currentTime]);
-      
-  //     // Check for excursions
-  //     checkTunnelExcursions();
-      
-  //     // Check for trial completion
-  //     const targetDist = Math.sqrt((cursorPos.x - targetPos.x) ** 2 + (cursorPos.y - targetPos.y) ** 2);
-  //     if (targetDist < TARGET_RADIUS) {
-  //       completeTrial(true);
-  //     }
-  //   };
-    
-  //   const interval = setInterval(updateTrial, 16); // ~60 FPS
-  //   return () => clearInterval(interval);
-  // }, [trialState, cursorPos, cursorVel, targetPos]);
 
   // Timer countdown (separate from trial updates)
   useEffect(() => {
@@ -363,24 +362,53 @@ const HumanSteeringExperiment = () => {
     return () => clearInterval(timerInterval);
   }, [trialState, timeLimit, trialStartTime]);
 
-  const checkTunnelExcursions = () => {
-    if (!tunnelPath.length) return;
+  // Modified excursion checking function
+  const checkTunnelExcursions = (x, y) => {
+    if (!tunnelPath.length) return { isExcursion: false };
     
-    const distances = tunnelPath.map(point => 
-      Math.sqrt((cursorPos.x - point.x) ** 2 + (cursorPos.y - point.y) ** 2)
-    );
-    const closestDistance = Math.min(...distances);
+    // Find closest point on tunnel path
+    let closestDistance = Infinity;
+    let closestPoint = null;
+    let closestIndex = -1;
+    
+    tunnelPath.forEach((point, index) => {
+      const distance = Math.sqrt((x - point.x) ** 2 + (y - point.y) ** 2);
+      if (distance < closestDistance) {
+        closestDistance = distance;
+        closestPoint = point;
+        closestIndex = index;
+      }
+    });
+    
     const halfWidth = tunnelWidth / 2;
     
     if (closestDistance > halfWidth) {
+      // Calculate the point on the boundary where excursion occurred
+      const directionX = (x - closestPoint.x) / closestDistance;
+      const directionY = (y - closestPoint.y) / closestDistance;
+      const boundaryPoint = {
+        x: closestPoint.x + directionX * halfWidth,
+        y: closestPoint.y + directionY * halfWidth
+      };
+      
+      // Record excursion for data purposes (even in boundary-enforced phases)
       const excursion = {
         timeIndex: trajectoryPoints.length - 1,
-        position: { ...cursorPos },
+        position: { x, y },
         distanceOutside: closestDistance - halfWidth,
-        timestamp: Date.now()
+        timestamp: Date.now(),
+        boundaryPoint: boundaryPoint
       };
       setExcursionEvents(prev => [...prev, excursion]);
+      
+      return { 
+        isExcursion: true, 
+        boundaryPoint: boundaryPoint,
+        excursion: excursion
+      };
     }
+    
+    return { isExcursion: false };
   };
 
   const calculateBoundaryViolationRate = () => {
@@ -489,6 +517,11 @@ const HumanSteeringExperiment = () => {
       drawTunnel(ctx);
     }
     
+         // Draw excursion markers (in phases where boundaries are marked)
+     if (shouldMarkBoundaries()) {
+       drawExcursionMarkers(ctx);
+     }
+    
     // Draw cursor
     drawCursor(ctx);
     
@@ -524,6 +557,31 @@ const HumanSteeringExperiment = () => {
       else ctx.lineTo(x, lowerY);
     });
     ctx.stroke();
+  };
+
+  const drawExcursionMarkers = (ctx) => {
+    excursionMarkers.forEach(marker => {
+      ctx.fillStyle = '#FF6B6B';
+      ctx.strokeStyle = '#DC2626';
+      ctx.lineWidth = 2;
+      
+      // Draw a small X mark at the excursion boundary point
+      const x = marker.x * SCALE;
+      const y = marker.y * SCALE;
+      const size = 4;
+      
+      ctx.beginPath();
+      ctx.moveTo(x - size, y - size);
+      ctx.lineTo(x + size, y + size);
+      ctx.moveTo(x - size, y + size);
+      ctx.lineTo(x + size, y - size);
+      ctx.stroke();
+      
+      // Draw a small circle around the X
+      ctx.beginPath();
+      ctx.arc(x, y, size + 2, 0, 2 * Math.PI);
+      ctx.stroke();
+    });
   };
 
   const drawCursor = (ctx) => {
@@ -581,7 +639,7 @@ const HumanSteeringExperiment = () => {
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [cursorPos, trialState, tunnelPath, startButtonPos, targetPos, tunnelWidth]);
+  }, [cursorPos, trialState, tunnelPath, startButtonPos, targetPos, tunnelWidth, excursionMarkers, shouldMarkBoundaries, hasExcursionMarker]);
 
   const downloadData = () => {
     const data = {
@@ -629,7 +687,8 @@ const HumanSteeringExperiment = () => {
               <ul className="space-y-3 mb-6">
                 <li>Click the green START button to begin each trial</li>
                 <li>Navigate through the tunnel to reach the red target</li>
-                <li>Try to stay within the tunnel boundaries</li>
+                <li><strong>Practice Round:</strong> Red X marks will show where you go outside boundaries, but you can continue</li>
+                <li><strong>Real Trials:</strong> You MUST stay within tunnel boundaries - violations will restart the trial</li>
                 <li>Move as smoothly and accurately as possible</li>
                 <li>You must successfully complete each trial to advance</li>
                 <li>Press R to restart the current trial if needed</li>
@@ -649,7 +708,8 @@ const HumanSteeringExperiment = () => {
               <ul className="space-y-3 mb-6">
                 <li>You must complete each trial within a time limit</li>
                 <li>The time limit varies based on tunnel difficulty</li>
-                <li>Balance speed and accuracy - stay in the tunnel while meeting the time requirements</li>
+                <li><strong>Good news:</strong> In these time trials, boundary violations are ignored - focus on speed!</li>
+                <li>Balance speed and accuracy - you can cross boundaries but try to stay reasonably close to the path</li>
                 <li>Before each new type of time trial, you'll get one practice round with a visible timer</li>
                 <li>In the actual trials, no timer will be shown, but the time limit will still be enforced</li>
               </ul>
@@ -657,8 +717,6 @@ const HumanSteeringExperiment = () => {
             </div>
           </div>
         );
-
-
 
       case ExperimentPhase.COMPLETE:
         return (
@@ -748,6 +806,8 @@ const HumanSteeringExperiment = () => {
                   <p className="mb-4">
                     {failedDueToTimeout 
                       ? "You ran out of time. Try to move faster."
+                      : shouldEnforceBoundaries()
+                      ? "You went outside the tunnel boundary, please retry the trial."
                       : "Complete the task to advance."
                     }
                   </p>
@@ -764,18 +824,18 @@ const HumanSteeringExperiment = () => {
     let statusText = "";
     let statusColor = "text-gray-600";
     
-    // Show phase and trial info
-    if (phase === ExperimentPhase.PRACTICE) {
-      statusText = "PRACTICE ROUND";
-      statusColor = "text-green-600";
-    } else if (phase === ExperimentPhase.MAIN_TRIALS && currentTrial < currentConditions.length) {
-      statusText = `Trial ${currentTrial + 1}/${currentConditions.length}: ${currentConditions[currentTrial].description}`;
-      statusColor = "text-blue-600";
+         // Show phase and trial info
+     if (phase === ExperimentPhase.PRACTICE) {
+       statusText = "PRACTICE ROUND - Boundaries marked (no interruption)";
+       statusColor = "text-green-600";
+     } else if (phase === ExperimentPhase.MAIN_TRIALS && currentTrial < currentConditions.length) {
+       statusText = `Trial ${currentTrial + 1}/${currentConditions.length}: ${currentConditions[currentTrial].description} - Boundaries enforced`;
+       statusColor = "text-blue-600";
     } else if (phase === ExperimentPhase.TIME_TRIAL_PRACTICE && currentPracticeCondition) {
-      statusText = `PRACTICE ROUND`;
+      statusText = `PRACTICE ROUND - Boundaries ignored`;
       statusColor = "text-purple-600";
     } else if (phase === ExperimentPhase.TIME_TRIALS && currentTrial < currentConditions.length) {
-      statusText = `Timed Trial ${currentTrial + 1}/${currentConditions.length}`;
+      statusText = `Timed Trial ${currentTrial + 1}/${currentConditions.length} - Boundaries ignored`;
       statusColor = "text-red-600";
     }
     
@@ -801,7 +861,7 @@ const HumanSteeringExperiment = () => {
     controls.push("Press 'R' to restart trial");
     
     if (phase === ExperimentPhase.PRACTICE || phase === ExperimentPhase.TIME_TRIAL_PRACTICE) {
-      controls.push("Press 'N' to continue to next phase");
+      controls.push("Press 'N' to continue to real trial(s)");
     }
     
     return (
