@@ -258,64 +258,91 @@ const HumanSteeringExperiment = () => {
     
     const currentTime = Date.now();
     
-    if (lastMousePos) {
+    // Calculate velocity if we have a previous position
+    let velocity = { x: 0, y: 0 };
+    if (lastMousePos && lastTimeRef.current) {
       const dt = (currentTime - lastTimeRef.current) / 1000;
       if (dt > 0) {
         const dx = x - lastMousePos.x;
         const dy = y - lastMousePos.y;
-        setCursorVel({ x: dx / dt, y: dy / dt });
+        velocity = { x: dx / dt, y: dy / dt };
       }
     }
     
-    setLastMousePos({ x, y });
+    // Update cursor position and velocity
     setCursorPos({ x, y });
+    setCursorVel(velocity);
+    
+    // Record data immediately when position updates (this is the key fix)
+    const speed = Math.sqrt(velocity.x ** 2 + velocity.y ** 2);
+    setTrajectoryPoints(prev => [...prev, { x, y }]);
+    setSpeedHistory(prev => [...prev, speed]);
+    setTimestampHistory(prev => [...prev, currentTime]);
+    
+    // Check for excursions
+    checkTunnelExcursions(x, y);
+    
+    // Check for trial completion
+    const targetDist = Math.sqrt((x - targetPos.x) ** 2 + (y - targetPos.y) ** 2);
+    if (targetDist < TARGET_RADIUS) {
+      completeTrial(true);
+    }
+    
+    setLastMousePos({ x, y });
     lastTimeRef.current = currentTime;
   };
 
   const startTrialMovement = () => {
     setTrialState(TrialState.IN_PROGRESS);
-    setTrialStartTime(Date.now());
+    const startTime = Date.now();
+    setTrialStartTime(startTime);
     setFailedDueToTimeout(false);
     
     if (timeLimit) {
       setTimeRemaining(timeLimit);
     }
     
-    setCursorPos(startButtonPos);
+    // Set cursor to start position
+    const startPos = { x: startButtonPos.x, y: startButtonPos.y };
+    setCursorPos(startPos);
     setCursorVel({ x: 0, y: 0 });
     
-    setTrajectoryPoints([startButtonPos]);
+    // Record initial data point (this was missing)
+    setTrajectoryPoints([startPos]);
     setSpeedHistory([0]);
-    setTimestampHistory([Date.now()]);
+    setTimestampHistory([startTime]);
     setExcursionEvents([]);
+    
+    setLastMousePos(startPos);
+    lastTimeRef.current = startTime;
   };
 
-  // Update trial state and timer
-  useEffect(() => {
-    if (trialState !== TrialState.IN_PROGRESS) return;
+  // // Update trial state and timer
+  // useEffect(() => {
+  //   if (trialState !== TrialState.IN_PROGRESS) return;
     
-    const updateTrial = () => {
-      const currentTime = Date.now();
+  //   const updateTrial = () => {
+  //     const currentTime = Date.now();
       
-      // Record data
-      const speed = Math.sqrt(cursorVel.x ** 2 + cursorVel.y ** 2);
-      setTrajectoryPoints(prev => [...prev, { ...cursorPos }]);
-      setSpeedHistory(prev => [...prev, speed]);
-      setTimestampHistory(prev => [...prev, currentTime]);
+  //     // Record data
+  //     const speed = Math.sqrt(cursorVel.x ** 2 + cursorVel.y ** 2);
+  //     setTrajectoryPoints(prev => [...prev, { ...cursorPos }]);
+  //     setSpeedHistory(prev => [...prev, speed]);
+  //     setTimestampHistory(prev => [...prev, currentTime]);
       
-      // Check for excursions
-      checkTunnelExcursions();
+  //     // Check for excursions
+  //     checkTunnelExcursions();
       
-      // Check for trial completion
-      const targetDist = Math.sqrt((cursorPos.x - targetPos.x) ** 2 + (cursorPos.y - targetPos.y) ** 2);
-      if (targetDist < TARGET_RADIUS) {
-        completeTrial(true);
-      }
-    };
+  //     // Check for trial completion
+  //     const targetDist = Math.sqrt((cursorPos.x - targetPos.x) ** 2 + (cursorPos.y - targetPos.y) ** 2);
+  //     if (targetDist < TARGET_RADIUS) {
+  //       completeTrial(true);
+  //     }
+  //   };
     
-    const interval = setInterval(updateTrial, 16); // ~60 FPS
-    return () => clearInterval(interval);
-  }, [trialState, cursorPos, cursorVel, targetPos]);
+  //   const interval = setInterval(updateTrial, 16); // ~60 FPS
+  //   return () => clearInterval(interval);
+  // }, [trialState, cursorPos, cursorVel, targetPos]);
 
   // Timer countdown (separate from trial updates)
   useEffect(() => {
@@ -600,12 +627,12 @@ const HumanSteeringExperiment = () => {
             <div className="bg-white rounded-lg shadow-lg p-8 max-w-3xl">
               <h2 className="text-2xl font-bold text-red-600 mb-6">Steering Task Instructions:</h2>
               <ul className="space-y-3 mb-6">
-                <li>• Click the green START button to begin each trial</li>
-                <li>• Navigate through the tunnel to reach the red target</li>
-                <li>• Try to stay within the tunnel boundaries</li>
-                <li>• Move as smoothly and accurately as possible</li>
-                <li>• You must successfully complete each trial to advance</li>
-                <li>• Press R to restart the current trial if needed</li>
+                <li>Click the green START button to begin each trial</li>
+                <li>Navigate through the tunnel to reach the red target</li>
+                <li>Try to stay within the tunnel boundaries</li>
+                <li>Move as smoothly and accurately as possible</li>
+                <li>You must successfully complete each trial to advance</li>
+                <li>Press R to restart the current trial if needed</li>
               </ul>
               <p className="mb-4">You will start with a practice trial to get familiar with the controls and task.</p>
               <p className="font-semibold">Press SPACEBAR to start practice</p>
@@ -620,11 +647,11 @@ const HumanSteeringExperiment = () => {
               <h2 className="text-2xl font-bold text-red-600 mb-6">Time-Constrained Trials:</h2>
               <p className="mb-4">The next part of the experiment includes trials with time constraints.</p>
               <ul className="space-y-3 mb-6">
-                <li>• You must complete each trial within a time limit</li>
-                <li>• The time limit varies based on tunnel difficulty</li>
-                <li>• Balance speed and accuracy - stay in the tunnel while meeting the time requirements</li>
-                <li>• Before each new type of time trial, you'll get one practice round with a visible timer</li>
-                <li>• In the actual trials, no timer will be shown, but the time limit will still be enforced</li>
+                <li>You must complete each trial within a time limit</li>
+                <li>The time limit varies based on tunnel difficulty</li>
+                <li>Balance speed and accuracy - stay in the tunnel while meeting the time requirements</li>
+                <li>Before each new type of time trial, you'll get one practice round with a visible timer</li>
+                <li>In the actual trials, no timer will be shown, but the time limit will still be enforced</li>
               </ul>
               <p className="font-semibold">Press SPACEBAR to begin time-constrained trials</p>
             </div>
