@@ -902,9 +902,8 @@ const HumanSteeringExperiment = () => {
                     onClick={handleCompleteExperiment}
                     className="bg-green-500 hover:bg-green-700 text-white font-bold py-3 px-6 rounded mb-4 w-full"
                   >
-                    Save Data & Download
+                    Upload Data
                   </button>
-                  <p className="text-sm text-gray-600">Data will be automatically saved to our database</p>
                 </div>
               )}
               
@@ -924,17 +923,11 @@ const HumanSteeringExperiment = () => {
                     <svg className="w-12 h-12 mx-auto mb-2" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                     </svg>
-                    <p className="font-semibold">Data saved successfully!</p>
+                    <p className="font-semibold">Data uploaded successfully!</p>
                   </div>
-                  {uploadedDocId && (
+                  {/* {uploadedDocId && (
                     <p className="text-xs text-gray-500 mb-4">Reference ID: {uploadedDocId}</p>
-                  )}
-                  <button
-                    onClick={downloadData}
-                    className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-                  >
-                    Download Backup Copy
-                  </button>
+                  )} */}
                 </div>
               )}
               
