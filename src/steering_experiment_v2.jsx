@@ -26,9 +26,9 @@ const TrialState = {
 // Trial conditions
 const BASIC_CONDITIONS = [
   { id: 1, tunnelWidth: 0.05, curvature: 0.025, timeLimit: null, description: "wide tunnel, gentle curve" },
-  // { id: 2, tunnelWidth: 0.05, curvature: 0.05, timeLimit: null, description: "wide tunnel, sharp curve" },
-  // { id: 3, tunnelWidth: 0.02, curvature: 0.025, timeLimit: null, description: "narrow tunnel, gentle curve" },
-  // { id: 4, tunnelWidth: 0.02, curvature: 0.05, timeLimit: null, description: "narrow tunnel, sharp curve" },
+  { id: 2, tunnelWidth: 0.05, curvature: 0.05, timeLimit: null, description: "wide tunnel, sharp curve" },
+  { id: 3, tunnelWidth: 0.02, curvature: 0.025, timeLimit: null, description: "narrow tunnel, gentle curve" },
+  { id: 4, tunnelWidth: 0.02, curvature: 0.05, timeLimit: null, description: "narrow tunnel, sharp curve" },
 ];
 
 const TIME_CONDITIONS = [
@@ -46,11 +46,11 @@ const TIME_CONDITIONS = [
 const SEQUENTIAL_CONDITIONS = [
   // Wide-to-narrow trials
   { id: 5, tunnelType: 'sequential', segmentType: 'width', segment1Width: 0.08, segment2Width: 0.01, timeLimit: null, description: "narrow-to-wide segments" },
-  // { id: 6, tunnelType: 'sequential', segmentType: 'width', segment1Width: 0.01, segment2Width: 0.08, timeLimit: null, description: "wide-to-narrow segments" },
+  { id: 6, tunnelType: 'sequential', segmentType: 'width', segment1Width: 0.01, segment2Width: 0.08, timeLimit: null, description: "wide-to-narrow segments" },
   
-  // // Straight-to-curved trials
-  // { id: 7, tunnelType: 'sequential', segmentType: 'curvature', segment1Width: 0.02, segment2Width: 0.02, segment1Curvature: 0, segment2Curvature: 0.05, timeLimit: null, description: "straight-to-curved segments" },
-  // { id: 8, tunnelType: 'sequential', segmentType: 'curvature', segment1Width: 0.05, segment2Width: 0.05, segment1Curvature: 0, segment2Curvature: 0.05, timeLimit: null, description: "straight-to-curved segments" },
+  // Straight-to-curved trials
+  { id: 7, tunnelType: 'sequential', segmentType: 'curvature', segment1Width: 0.02, segment2Width: 0.02, segment1Curvature: 0, segment2Curvature: 0.05, timeLimit: null, description: "straight-to-curved segments" },
+  { id: 8, tunnelType: 'sequential', segmentType: 'curvature', segment1Width: 0.05, segment2Width: 0.05, segment1Curvature: 0, segment2Curvature: 0.05, timeLimit: null, description: "straight-to-curved segments" },
 ];
 
 // Sequential tunnel time-constrained conditions
