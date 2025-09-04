@@ -1,9 +1,12 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-// Change "steering-experiment" to your repo name exactly
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react({
+    eslint: {
+      disable: true
+    }
+  })],
   base: '/steering-experiment/',
   build: {
     outDir: 'dist',
