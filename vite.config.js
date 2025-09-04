@@ -12,5 +12,14 @@ export default defineConfig({
     outDir: 'dist',
     assetsDir: 'assets',
     sourcemap: false,
+    rollupOptions: {
+      onwarn(warning, warn) {
+        // Suppress all warnings
+        return;
+      }
+    }
   },
+  esbuild: {
+    logOverride: { 'this-is-undefined-in-esm': 'silent' }
+  }
 })
