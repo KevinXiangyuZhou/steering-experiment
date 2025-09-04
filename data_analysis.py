@@ -366,12 +366,8 @@ def analyze_json_data(json_file_path, output_dir=None):
         
         # Print trial summary
         completion_time = trial_data.get('completionTime', 0)
-        violation_rate = trial_data.get('boundaryViolationRate', 0) * 100
-        success = trial_data.get('success', False)
         
-        print(f"  - Success: {success}")
         print(f"  - Completion time: {completion_time:.2f}s")
-        print(f"  - Boundary violations: {violation_rate:.1f}%")
         print(f"  - Excursions: {len(excursion_positions)}")
         print()
     
@@ -424,49 +420,39 @@ def generate_summary_stats(trial_data_list, output_dir, participant_id):
         # Overall statistics
         if trial_data_list:
             completion_times = [t.get('completionTime', 0) for t in trial_data_list]
-            violation_rates = [t.get('boundaryViolationRate', 0) for t in trial_data_list]
             
             f.write("Overall Statistics:\n")
-            f.write(f"  Average completion time: {np.mean(completion_times):.2f}s\n")
-            f.write(f"  Average boundary violations: {np.mean(violation_rates)*100:.1f}%\n\n")
+            f.write(f"  Average completion time: {np.mean(completion_times):.2f}s\n\n")
         
         # Basic trials statistics
         if basic_trials:
             basic_times = [t.get('completionTime', 0) for t in basic_trials]
-            basic_violations = [t.get('boundaryViolationRate', 0) for t in basic_trials]
             
             f.write("Basic Trials Statistics:\n")
-            f.write(f"  Average completion time: {np.mean(basic_times):.2f}s\n")
-            f.write(f"  Average boundary violations: {np.mean(basic_violations)*100:.1f}%\n\n")
+            f.write(f"  Average completion time: {np.mean(basic_times):.2f}s\n\n")
         
         # Time-constrained trials statistics
         if time_trials:
             time_times = [t.get('completionTime', 0) for t in time_trials]
-            time_violations = [t.get('boundaryViolationRate', 0) for t in time_trials]
             timeout_failures = sum(1 for t in time_trials if t.get('failedDueToTimeout', False))
             
             f.write("Time-Constrained Trials Statistics:\n")
             f.write(f"  Average completion time: {np.mean(time_times):.2f}s\n")
-            f.write(f"  Average boundary violations: {np.mean(time_violations)*100:.1f}%\n")
             f.write(f"  Timeout failures: {timeout_failures}\n\n")
         
         # Curved tunnel statistics
         if curved_trials:
             curved_times = [t.get('completionTime', 0) for t in curved_trials]
-            curved_violations = [t.get('boundaryViolationRate', 0) for t in curved_trials]
             
             f.write("Curved Tunnel Statistics:\n")
-            f.write(f"  Average completion time: {np.mean(curved_times):.2f}s\n")
-            f.write(f"  Average boundary violations: {np.mean(curved_violations)*100:.1f}%\n\n")
+            f.write(f"  Average completion time: {np.mean(curved_times):.2f}s\n\n")
         
         # Sequential tunnel statistics
         if sequential_trials:
             sequential_times = [t.get('completionTime', 0) for t in sequential_trials]
-            sequential_violations = [t.get('boundaryViolationRate', 0) for t in sequential_trials]
             
             f.write("Sequential Tunnel Statistics:\n")
-            f.write(f"  Average completion time: {np.mean(sequential_times):.2f}s\n")
-            f.write(f"  Average boundary violations: {np.mean(sequential_violations)*100:.1f}%\n\n")
+            f.write(f"  Average completion time: {np.mean(sequential_times):.2f}s\n\n")
         
         # Individual trial details
         f.write("Individual Trial Details:\n")
@@ -475,11 +461,9 @@ def generate_summary_stats(trial_data_list, output_dir, participant_id):
             trial_id = trial.get('trialId', 'Unknown')
             condition = trial.get('condition', {})
             completion_time = trial.get('completionTime', 0)
-            violation_rate = trial.get('boundaryViolationRate', 0) * 100
-            success = trial.get('success', False)
             
             f.write(f"Trial {trial_id}: {condition.get('description', 'No description')}\n")
-            f.write(f"  Success: {success}, Time: {completion_time:.2f}s, Violations: {violation_rate:.1f}%\n")
+            f.write(f"  Time: {completion_time:.2f}s\n")
     
     print(f"Summary statistics saved to: {summary_file}")
 

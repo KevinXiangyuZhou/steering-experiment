@@ -491,33 +491,15 @@ const HumanSteeringExperiment = () => {
     return { isExcursion: false };
   };
 
-  const calculateBoundaryViolationRate = () => {
-    if (!trajectoryPoints.length || !tunnelPath.length) return 0;
-    
-    let violations = 0;
-    const halfWidth = tunnelWidth / 2;
-    
-    trajectoryPoints.forEach(point => {
-      const distances = tunnelPath.map(tunnelPoint =>
-        Math.sqrt((point.x - tunnelPoint.x) ** 2 + (point.y - tunnelPoint.y) ** 2)
-      );
-      const closestDistance = Math.min(...distances);
-      if (closestDistance > halfWidth) violations++;
-    });
-    
-    return violations / trajectoryPoints.length;
-  };
 
   const completeTrial = (success) => {
     const endTime = Date.now();
     const completionTime = (endTime - trialStartTime) / 1000;
-    const boundaryViolationRate = calculateBoundaryViolationRate();
     
     if (isPractice || phase === ExperimentPhase.TIME_TRIAL_PRACTICE) {
       if (success) {
-        const violationPct = boundaryViolationRate * 100;
         const phaseName = phase === ExperimentPhase.PRACTICE ? "Practice" : "Individual practice";
-        console.log(`${phaseName} completed! Time: ${completionTime.toFixed(2)}s, Violations: ${violationPct.toFixed(1)}%`);
+        console.log(`${phaseName} completed! Time: ${completionTime.toFixed(2)}s`);
       }
       setTrialState(success ? TrialState.WAITING_FOR_START : TrialState.FAILED);
       return;
@@ -537,12 +519,8 @@ const HumanSteeringExperiment = () => {
       trajectory: [...trajectoryPoints],
       speeds: [...speedHistory],
       timestamps: [...timestampHistory],
-      excursions: [...excursionEvents],
-      success,
       completionTime,
       startTime: trialStartTime,
-      endTime,
-      boundaryViolationRate,
       failedDueToTimeout
     };
     
@@ -798,8 +776,6 @@ const HumanSteeringExperiment = () => {
       summary: {
         totalTrials: trialData.length,
         averageCompletionTime: trialData.reduce((sum, t) => sum + t.completionTime, 0) / trialData.length,
-        averageBoundaryViolationRate: trialData.reduce((sum, t) => sum + t.boundaryViolationRate, 0) / trialData.length,
-        timeoutFailures: trialData.filter(t => t.failedDueToTimeout).length
       }
     };
     
@@ -829,8 +805,6 @@ const HumanSteeringExperiment = () => {
         summary: {
           totalTrials: trialData.length,
           averageCompletionTime: trialData.reduce((sum, t) => sum + t.completionTime, 0) / trialData.length,
-          averageBoundaryViolationRate: trialData.reduce((sum, t) => sum + t.boundaryViolationRate, 0) / trialData.length,
-          timeoutFailures: trialData.filter(t => t.failedDueToTimeout).length
         },
         experimentVersion: '2.0',
         completedAt: new Date().toISOString()
