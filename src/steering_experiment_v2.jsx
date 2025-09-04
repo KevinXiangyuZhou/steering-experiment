@@ -25,43 +25,48 @@ const TrialState = {
 
 // Trial conditions
 const BASIC_CONDITIONS = [
-  // { id: 1, tunnelWidth: 0.015, curvature: 0.01, timeLimit: null, description: "narrow tunnel, gentle curve" },
-  // { id: 2, tunnelWidth: 0.015, curvature: 0.03, timeLimit: null, description: "narrow tunnel, moderate curve" },
-  // { id: 3, tunnelWidth: 0.015, curvature: 0.05, timeLimit: null, description: "narrow tunnel, sharp curve" },
-  // { id: 4, tunnelWidth: 0.025, curvature: 0.01, timeLimit: null, description: "medium tunnel, gentle curve" },
-  // { id: 5, tunnelWidth: 0.025, curvature: 0.03, timeLimit: null, description: "medium tunnel, moderate curve" },
-  // { id: 6, tunnelWidth: 0.025, curvature: 0.05, timeLimit: null, description: "medium tunnel, sharp curve" },
-  // { id: 7, tunnelWidth: 0.03, curvature: 0.01, timeLimit: null, description: "wide tunnel, gentle curve" },
-  // { id: 8, tunnelWidth: 0.03, curvature: 0.03, timeLimit: null, description: "wide tunnel, moderate curve" },
-  { id: 9, tunnelWidth: 0.03, curvature: 0.05, timeLimit: null, description: "wide tunnel, sharp curve" },
+  { id: 1, tunnelWidth: 0.05, curvature: 0.025, timeLimit: null, description: "wide tunnel, gentle curve" },
+  // { id: 2, tunnelWidth: 0.05, curvature: 0.05, timeLimit: null, description: "wide tunnel, sharp curve" },
+  // { id: 3, tunnelWidth: 0.02, curvature: 0.025, timeLimit: null, description: "narrow tunnel, gentle curve" },
+  // { id: 4, tunnelWidth: 0.02, curvature: 0.05, timeLimit: null, description: "narrow tunnel, sharp curve" },
 ];
 
 const TIME_CONDITIONS = [
-  // { id: 10, tunnelWidth: 0.025, curvature: 0.01, timeLimit: 6.0, description: "narrow tunnel, gentle curve, 6s limit" },
-  // { id: 11, tunnelWidth: 0.025, curvature: 0.01, timeLimit: 4.0, description: "narrow tunnel, gentle curve, 4s limit" },
-  // { id: 12, tunnelWidth: 0.025, curvature: 0.01, timeLimit: 2.0, description: "narrow tunnel, gentle curve, 2s limit" },
-  // { id: 13, tunnelWidth: 0.025, curvature: 0.03, timeLimit: 6.0, description: "narrow tunnel, moderate curve, 6s limit" },
-  // { id: 14, tunnelWidth: 0.025, curvature: 0.03, timeLimit: 4.0, description: "narrow tunnel, moderate curve, 4s limit" },
-  // { id: 15, tunnelWidth: 0.025, curvature: 0.03, timeLimit: 2.0, description: "narrow tunnel, moderate curve, 2s limit" },
-  // { id: 16, tunnelWidth: 0.025, curvature: 0.05, timeLimit: 8.0, description: "narrow tunnel, sharp curve, 8s limit" },
-  // { id: 17, tunnelWidth: 0.025, curvature: 0.05, timeLimit: 6.0, description: "narrow tunnel, sharp curve, 6s limit" },
-  { id: 18, tunnelWidth: 0.025, curvature: 0.05, timeLimit: 4.0, description: "narrow tunnel, sharp curve, 4s limit" },
+  { id: 11, tunnelWidth: 0.05, curvature: 0.025, timeLimit: 4, description: "wide tunnel, gentle curve time limit 4s" },
+  { id: 12, tunnelWidth: 0.05, curvature: 0.05, timeLimit: 4, description: "wide tunnel, sharp curve time limit 4s" },
+  { id: 13, tunnelWidth: 0.02, curvature: 0.025, timeLimit: 4, description: "narrow tunnel, gentle curve time limit 4s" },
+  { id: 14, tunnelWidth: 0.02, curvature: 0.05, timeLimit: 4, description: "narrow tunnel, sharp curve time limit 4s" },
+  { id: 15, tunnelWidth: 0.05, curvature: 0.025, timeLimit: 2, description: "wide tunnel, gentle curve time limit 2s" },
+  { id: 16, tunnelWidth: 0.05, curvature: 0.05, timeLimit: 2, description: "wide tunnel, sharp curve time limit 2s" },
+  { id: 17, tunnelWidth: 0.02, curvature: 0.025, timeLimit: 2, description: "narrow tunnel, gentle curve time limit 2s" },
+  { id: 18, tunnelWidth: 0.02, curvature: 0.05, timeLimit: 2, description: "narrow tunnel, sharp curve time limit 2s" },
 ];
 
-// Sequential tunnel conditions (narrow-wide-narrow segments)
+// Sequential tunnel conditions (2 segments)
 const SEQUENTIAL_CONDITIONS = [
-  // { id: 19, tunnelType: 'sequential', segment1Width: 0.015, segment2Width: 0.025, segment3Width: 0.015, timeLimit: null, description: "narrow-wide-narrow segments (15-25-15)" },
-  // { id: 20, tunnelType: 'sequential', segment1Width: 0.015, segment2Width: 0.035, segment3Width: 0.015, timeLimit: null, description: "narrow-wide-narrow segments (15-35-15)" },
-  // { id: 21, tunnelType: 'sequential', segment1Width: 0.020, segment2Width: 0.030, segment3Width: 0.020, timeLimit: null, description: "narrow-wide-narrow segments (20-30-20)" },
-  { id: 22, tunnelType: 'sequential', segment1Width: 0.010, segment2Width: 0.040, segment3Width: 0.010, timeLimit: null, description: "narrow-wide-narrow segments (10-40-10)" },
+  // Wide-to-narrow trials
+  { id: 5, tunnelType: 'sequential', segmentType: 'width', segment1Width: 0.08, segment2Width: 0.01, timeLimit: null, description: "narrow-to-wide segments" },
+  // { id: 6, tunnelType: 'sequential', segmentType: 'width', segment1Width: 0.01, segment2Width: 0.08, timeLimit: null, description: "wide-to-narrow segments" },
+  
+  // // Straight-to-curved trials
+  // { id: 7, tunnelType: 'sequential', segmentType: 'curvature', segment1Width: 0.02, segment2Width: 0.02, segment1Curvature: 0, segment2Curvature: 0.05, timeLimit: null, description: "straight-to-curved segments" },
+  // { id: 8, tunnelType: 'sequential', segmentType: 'curvature', segment1Width: 0.05, segment2Width: 0.05, segment1Curvature: 0, segment2Curvature: 0.05, timeLimit: null, description: "straight-to-curved segments" },
 ];
 
 // Sequential tunnel time-constrained conditions
 const SEQUENTIAL_TIME_CONDITIONS = [
-  // { id: 23, tunnelType: 'sequential', segment1Width: 0.015, segment2Width: 0.025, segment3Width: 0.015, timeLimit: 6.0, description: "narrow-wide-narrow segments (15-25-15), 6s limit" },
-  // { id: 24, tunnelType: 'sequential', segment1Width: 0.015, segment2Width: 0.035, segment3Width: 0.015, timeLimit: 5.0, description: "narrow-wide-narrow segments (15-35-15), 5s limit" },
-  // { id: 25, tunnelType: 'sequential', segment1Width: 0.020, segment2Width: 0.030, segment3Width: 0.020, timeLimit: 4.0, description: "narrow-wide-narrow segments (20-30-20), 4s limit" },
-  { id: 26, tunnelType: 'sequential', segment1Width: 0.010, segment2Width: 0.040, segment3Width: 0.010, timeLimit: 7.0, description: "narrow-wide-narrow segments (10-40-10), 7s limit" },
+  // Wide-to-narrow trials with time limits
+  { id: 19, tunnelType: 'sequential', segmentType: 'width', segment1Width: 0.08, segment2Width: 0.01, timeLimit: 2, description: "narrow-to-wide segments time limit 2s" },
+  { id: 20, tunnelType: 'sequential', segmentType: 'width', segment1Width: 0.01, segment2Width: 0.08, timeLimit: 2, description: "wide-to-narrow segments time limit 2s" },
+  { id: 21, tunnelType: 'sequential', segmentType: 'width', segment1Width: 0.08, segment2Width: 0.01, timeLimit: 1, description: "narrow-to-wide segments time limit 1s" },
+  { id: 22, tunnelType: 'sequential', segmentType: 'width', segment1Width: 0.01, segment2Width: 0.08, timeLimit: 1, description: "wide-to-narrow segments time limit 1s" },
+  
+  // Straight-to-curved trials
+  { id: 23, tunnelType: 'sequential', segmentType: 'curvature', segment1Width: 0.02, segment2Width: 0.02, segment1Curvature: 2, segment2Curvature: 0.05, timeLimit: 2, description: "straight-to-curved segments time limit 2s" },
+  { id: 24, tunnelType: 'sequential', segmentType: 'curvature', segment1Width: 0.05, segment2Width: 0.05, segment1Curvature: 2, segment2Curvature: 0.05, timeLimit: 2, description: "straight-to-curved segments time limit 2s" },
+  { id: 25, tunnelType: 'sequential', segmentType: 'curvature', segment1Width: 0.02, segment2Width: 0.02, segment1Curvature: 1, segment2Curvature: 0.05, timeLimit: 1, description: "straight-to-curved segments time limit 1s" },
+  { id: 26, tunnelType: 'sequential', segmentType: 'curvature', segment1Width: 0.05, segment2Width: 0.05, segment1Curvature: 1, segment2Curvature: 0.05, timeLimit: 1, description: "straight-to-curved segments time limit 1s" },
+
 ];
 
 const HumanSteeringExperiment = () => {
@@ -146,16 +151,33 @@ const HumanSteeringExperiment = () => {
     return path;
   }, []);
 
-  // Generate sequential horizontal tunnel segments (narrow-wide-narrow)
-  const generateSequentialTunnelPath = useCallback((segment1Width, segment2Width, segment3Width) => {
+  // Generate sequential tunnel segments (2 segments)
+  const generateSequentialTunnelPath = useCallback((condition) => {
     const tunnelStartX = 0.0;
     const tunnelEndX = 0.46;
     const tunnelYBase = 0.13;
-    const segmentLength = (tunnelEndX - tunnelStartX) / 3;
+    const segmentLength = (tunnelEndX - tunnelStartX) / 2; // 2 segments instead of 3
     
     const path = [];
     for (let x = tunnelStartX; x < tunnelEndX; x += TUNNEL_STEP) {
-      const y = tunnelYBase; // Horizontal line
+      let y = tunnelYBase; // Default horizontal line
+      
+      // Apply curvature for straight-to-curved segments
+      if (condition.segmentType === 'curvature') {
+        if (x < tunnelStartX + segmentLength) {
+          // First segment: straight (curvature = 0)
+          y = tunnelYBase;
+        } else {
+          // Second segment: curved with single peak
+          const segmentX = x - (tunnelStartX + segmentLength);
+          const amplitude = condition.segment2Curvature;
+          const segmentWidth = segmentLength;
+          // Create a single peak curve using a quadratic function
+          const normalizedX = segmentX / segmentWidth; // 0 to 1
+          y = tunnelYBase + amplitude * (1 - Math.pow(2 * normalizedX - 1, 2));
+        }
+      }
+      
       path.push({ x, y });
     }
     return path;
@@ -165,9 +187,9 @@ const HumanSteeringExperiment = () => {
   const setupTrial = useCallback((condition) => {
     let path;
     if (condition.tunnelType === 'sequential') {
-      path = generateSequentialTunnelPath(condition.segment1Width, condition.segment2Width, condition.segment3Width);
+      path = generateSequentialTunnelPath(condition);
       setTunnelType('sequential');
-      setSegmentWidths([condition.segment1Width, condition.segment2Width, condition.segment3Width]);
+      setSegmentWidths([condition.segment1Width, condition.segment2Width]);
       setTunnelWidth(condition.segment1Width); // Use first segment width as default
     } else {
       path = generateTunnelPath(condition.curvature);
@@ -255,7 +277,7 @@ const HumanSteeringExperiment = () => {
             
             // Check if first condition needs practice (it always will since we cleared practiced conditions)
             const firstCondition = newConditions[0];
-            const conditionKey = `${firstCondition.curvature}-${firstCondition.timeLimit}`;
+            const conditionKey = `${firstCondition.tunnelWidth}-${firstCondition.curvature}-${firstCondition.timeLimit}`;
             
             // Start with practice for first time trial
             setPhase(ExperimentPhase.TIME_TRIAL_PRACTICE);
@@ -270,11 +292,29 @@ const HumanSteeringExperiment = () => {
             setupTrial(currentPracticeCondition);
           } else if (event.key === 'n') {
             // Mark this condition as practiced
-            const conditionKey = `${currentPracticeCondition.curvature}-${currentPracticeCondition.timeLimit}`;
+            let conditionKey;
+            
+            if (currentPracticeCondition.tunnelType === 'sequential') {
+              // For sequential trials, use tunnel type and segment parameters
+              if (currentPracticeCondition.segmentType === 'width') {
+                conditionKey = `sequential-width-${currentPracticeCondition.segment1Width}-${currentPracticeCondition.segment2Width}-${currentPracticeCondition.timeLimit}`;
+              } else {
+                conditionKey = `sequential-curvature-${currentPracticeCondition.segment1Width}-${currentPracticeCondition.segment2Width}-${currentPracticeCondition.segment1Curvature}-${currentPracticeCondition.segment2Curvature}-${currentPracticeCondition.timeLimit}`;
+              }
+            } else {
+              // For regular curved trials
+              conditionKey = `${currentPracticeCondition.tunnelWidth}-${currentPracticeCondition.curvature}-${currentPracticeCondition.timeLimit}`;
+            }
+            
             setPracticedConditions(prev => new Set([...prev, conditionKey]));
             
             // Move to the actual trial for the CURRENT trial number (don't increment)
-            setPhase(ExperimentPhase.TIME_TRIALS);
+            // Return to the appropriate phase based on trial type
+            if (currentPracticeCondition.tunnelType === 'sequential') {
+              setPhase(ExperimentPhase.SEQUENTIAL_TIME_TRIALS);
+            } else {
+              setPhase(ExperimentPhase.TIME_TRIALS);
+            }
             setIsPractice(false);
             setupTrial(currentConditions[currentTrial]);
           }
@@ -453,8 +493,8 @@ const HumanSteeringExperiment = () => {
     // Determine tunnel width based on tunnel type and position
     let halfWidth;
     if (tunnelType === 'sequential') {
-      // Calculate which segment the point is in
-      const segmentLength = tunnelPath.length / 3;
+      // Calculate which segment the point is in (2 segments)
+      const segmentLength = tunnelPath.length / 2;
       const segmentIndex = Math.floor(closestIndex / segmentLength);
       const currentSegmentWidth = segmentWidths[Math.min(segmentIndex, segmentWidths.length - 1)];
       halfWidth = currentSegmentWidth / 2;
@@ -544,7 +584,32 @@ const HumanSteeringExperiment = () => {
         setPhase(ExperimentPhase.SEQUENTIAL_TIME_TRIALS);
         setCurrentTrial(0);
         setCurrentConditions([...SEQUENTIAL_TIME_CONDITIONS]);
-        setupTrial(SEQUENTIAL_TIME_CONDITIONS[0]);
+        
+        // Check if first sequential time condition needs practice
+        const firstCondition = SEQUENTIAL_TIME_CONDITIONS[0];
+        let conditionKey;
+        
+        if (firstCondition.tunnelType === 'sequential') {
+          // For sequential trials, use tunnel type and segment parameters
+          if (firstCondition.segmentType === 'width') {
+            conditionKey = `sequential-width-${firstCondition.segment1Width}-${firstCondition.segment2Width}-${firstCondition.timeLimit}`;
+          } else {
+            conditionKey = `sequential-curvature-${firstCondition.segment1Width}-${firstCondition.segment2Width}-${firstCondition.segment1Curvature}-${firstCondition.segment2Curvature}-${firstCondition.timeLimit}`;
+          }
+        } else {
+          // For regular curved trials
+          conditionKey = `${firstCondition.tunnelWidth}-${firstCondition.curvature}-${firstCondition.timeLimit}`;
+        }
+        
+        if (!practicedConditions.has(conditionKey)) {
+          setPhase(ExperimentPhase.TIME_TRIAL_PRACTICE);
+          setCurrentPracticeCondition(firstCondition);
+          setIsPractice(true);
+          setupTrial(firstCondition);
+        } else {
+          setIsPractice(false);
+          setupTrial(firstCondition);
+        }
       } else if (phase === ExperimentPhase.SEQUENTIAL_TIME_TRIALS) {
         setPhase(ExperimentPhase.COMPLETE);
       }
@@ -555,7 +620,7 @@ const HumanSteeringExperiment = () => {
     if (phase === ExperimentPhase.TIME_TRIALS) {
       // For time trials, check if the next condition needs practice
       const nextCondition = currentConditions[nextTrial];
-      const conditionKey = `${nextCondition.curvature}-${nextCondition.timeLimit}`;
+      const conditionKey = `${nextCondition.tunnelWidth}-${nextCondition.curvature}-${nextCondition.timeLimit}`;
       
       if (!practicedConditions.has(conditionKey)) {
         setPhase(ExperimentPhase.TIME_TRIAL_PRACTICE);
@@ -564,6 +629,33 @@ const HumanSteeringExperiment = () => {
         setupTrial(nextCondition);
       } else {
         setPhase(ExperimentPhase.TIME_TRIALS);
+        setIsPractice(false);
+        setupTrial(nextCondition);
+      }
+    } else if (phase === ExperimentPhase.SEQUENTIAL_TIME_TRIALS) {
+      // For sequential time trials, check if the next condition needs practice
+      const nextCondition = currentConditions[nextTrial];
+      let conditionKey;
+      
+      if (nextCondition.tunnelType === 'sequential') {
+        // For sequential trials, use tunnel type and segment parameters
+        if (nextCondition.segmentType === 'width') {
+          conditionKey = `sequential-width-${nextCondition.segment1Width}-${nextCondition.segment2Width}-${nextCondition.timeLimit}`;
+        } else {
+          conditionKey = `sequential-curvature-${nextCondition.segment1Width}-${nextCondition.segment2Width}-${nextCondition.segment1Curvature}-${nextCondition.segment2Curvature}-${nextCondition.timeLimit}`;
+        }
+      } else {
+        // For regular curved trials
+        conditionKey = `${nextCondition.tunnelWidth}-${nextCondition.curvature}-${nextCondition.timeLimit}`;
+      }
+      
+      if (!practicedConditions.has(conditionKey)) {
+        setPhase(ExperimentPhase.TIME_TRIAL_PRACTICE);
+        setCurrentPracticeCondition(nextCondition);
+        setIsPractice(true);
+        setupTrial(nextCondition);
+      } else {
+        setPhase(ExperimentPhase.SEQUENTIAL_TIME_TRIALS);
         setIsPractice(false);
         setupTrial(nextCondition);
       }
@@ -607,10 +699,10 @@ const HumanSteeringExperiment = () => {
     ctx.lineWidth = 2;
     
     if (tunnelType === 'sequential') {
-      // Draw sequential tunnel segments with different widths
-      const segmentLength = tunnelPath.length / 3;
+      // Draw sequential tunnel segments with different widths (2 segments)
+      const segmentLength = tunnelPath.length / 2;
       
-      for (let segment = 0; segment < 3; segment++) {
+      for (let segment = 0; segment < 2; segment++) {
         const startIndex = Math.floor(segment * segmentLength);
         const endIndex = Math.floor((segment + 1) * segmentLength);
         const halfWidth = segmentWidths[segment] / 2;
@@ -638,30 +730,28 @@ const HumanSteeringExperiment = () => {
         ctx.stroke();
       }
       
-      // Draw vertical connecting lines between segments
+      // Draw vertical connecting line between the 2 segments
       ctx.strokeStyle = '#666666';
       ctx.lineWidth = 2;
       
-      for (let segment = 1; segment < 3; segment++) {
-        const transitionIndex = Math.floor(segment * segmentLength);
-        if (transitionIndex < tunnelPath.length) {
-          const transitionPoint = tunnelPath[transitionIndex];
-          const x = transitionPoint.x * SCALE;
-          const prevHalfWidth = segmentWidths[segment - 1] / 2;
-          const currHalfWidth = segmentWidths[segment] / 2;
-          
-          // Draw vertical line connecting upper boundaries
-          ctx.beginPath();
-          ctx.moveTo(x, (transitionPoint.y - prevHalfWidth) * SCALE);
-          ctx.lineTo(x, (transitionPoint.y - currHalfWidth) * SCALE);
-          ctx.stroke();
-          
-          // Draw vertical line connecting lower boundaries
-          ctx.beginPath();
-          ctx.moveTo(x, (transitionPoint.y + prevHalfWidth) * SCALE);
-          ctx.lineTo(x, (transitionPoint.y + currHalfWidth) * SCALE);
-          ctx.stroke();
-        }
+      const transitionIndex = Math.floor(segmentLength);
+      if (transitionIndex < tunnelPath.length) {
+        const transitionPoint = tunnelPath[transitionIndex];
+        const x = transitionPoint.x * SCALE;
+        const prevHalfWidth = segmentWidths[0] / 2;
+        const currHalfWidth = segmentWidths[1] / 2;
+        
+        // Draw vertical line connecting upper boundaries
+        ctx.beginPath();
+        ctx.moveTo(x, (transitionPoint.y - prevHalfWidth) * SCALE);
+        ctx.lineTo(x, (transitionPoint.y - currHalfWidth) * SCALE);
+        ctx.stroke();
+        
+        // Draw vertical line connecting lower boundaries
+        ctx.beginPath();
+        ctx.moveTo(x, (transitionPoint.y + prevHalfWidth) * SCALE);
+        ctx.lineTo(x, (transitionPoint.y + currHalfWidth) * SCALE);
+        ctx.stroke();
       }
     } else {
       // Draw curved tunnel with uniform width
@@ -853,14 +943,15 @@ const HumanSteeringExperiment = () => {
               <ul className="space-y-3 mb-6">
                 <li>Click the green START button to begin each trial</li>
                 <li>Navigate through the tunnel to reach the red target</li>
-                <li><strong>Practice Round:</strong> Red X marks will show where you go outside boundaries, but you can continue</li>
-                <li><strong>Real Trials:</strong> You MUST stay within tunnel boundaries - violations will restart the trial</li>
+                <li>Do NOT stop once you begin the trial</li>
                 <li>Move as smoothly and accurately as possible</li>
-                <li>You must successfully complete each trial to advance</li>
-                <li>Press R to restart the current trial if needed</li>
+                {/* <li>You must successfully complete each trial to advance</li> */}
+                <li>Press R to restart the current trial at anytime if needed</li>
+                {/* <li><strong>Real Trials:</strong> You MUST stay within tunnel boundaries - violations will restart the trial</li> */}
+                
               </ul>
               <p className="mb-4">You will start with a practice trial to get familiar with the controls and task.</p>
-              <p className="font-semibold">Press SPACEBAR to start practice</p>
+              <p className="font-semibold">Press 'SPACEBAR' to start practice</p>
             </div>
           </div>
         );
@@ -871,17 +962,18 @@ const HumanSteeringExperiment = () => {
         return (
           <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-6">
             <div className="bg-white rounded-lg shadow-lg p-8 max-w-3xl">
-              <h2 className="text-2xl font-bold text-red-600 mb-6">Time-Constrained Trials:</h2>
-              <p className="mb-4">The next part of the experiment includes trials with time constraints.</p>
-              <ul className="space-y-3 mb-6">
-                <li>You must complete each trial within a time limit</li>
-                <li>The time limit varies based on tunnel difficulty</li>
-                <li><strong>Good news:</strong> In these time trials, boundary violations are ignored - focus on speed!</li>
-                <li>Balance speed and accuracy - you can cross boundaries but try to stay reasonably close to the path</li>
-                <li>Before each new type of time trial, you'll get one practice round with a visible timer</li>
-                <li>In the actual trials, no timer will be shown, but the time limit will still be enforced</li>
-              </ul>
-              <p className="font-semibold">Press SPACEBAR to begin time-constrained trials</p>
+            <h2 className="text-2xl font-bold text-red-600 mb-6">Time-Constrained Trials</h2>
+            <p className="mb-4">
+              In this part of the experiment, you must complete each task within a set time limit.
+            </p>
+            <ul className="space-y-3 mb-6">
+              <li>Each trial has a different time limit.</li>
+              <li>Before each new type of timed trial, you’ll complete one practice round with a visible timer.</li>
+              <li>During practice, learn the timing; in the actual trial, the timer won’t be shown but the limit will still apply.</li>
+              <li>You may cross the boundary, but aim to follow the tunnel as closely as possible.</li>
+              <li>Balance speed and accuracy — the goal is to finish right as the time runs out.</li>
+            </ul>
+            <p className="font-semibold">Press SPACEBAR to begin time-constrained trials.</p>
             </div>
           </div>
         );
@@ -1080,7 +1172,7 @@ const HumanSteeringExperiment = () => {
     
     // Show phase and trial info
     if (phase === ExperimentPhase.PRACTICE) {
-      statusText = "PRACTICE ROUND - Boundaries marked (no interruption)";
+      statusText = "PRACTICE ROUND";
       statusColor = "text-green-600";
     } else if (phase === ExperimentPhase.MAIN_TRIALS && currentTrial < currentConditions.length) {
       statusText = `Trial ${getNormalTrialNumber()}/${getNormalTotalTrials()}`;
@@ -1089,7 +1181,7 @@ const HumanSteeringExperiment = () => {
       statusText = `Trial ${getNormalTrialNumber()}/${getNormalTotalTrials()}`;
       statusColor = "text-indigo-600";
     } else if (phase === ExperimentPhase.TIME_TRIAL_PRACTICE && currentPracticeCondition) {
-      statusText = `PRACTICE ROUND - Boundaries ignored`;
+      statusText = `PRACTICE ROUND`;
       statusColor = "text-purple-600";
     } else if (phase === ExperimentPhase.TIME_TRIALS && currentTrial < currentConditions.length) {
       statusText = `Timed Trial ${getTimedTrialNumber()}/${getTimedTotalTrials()}`;
@@ -1121,7 +1213,7 @@ const HumanSteeringExperiment = () => {
     controls.push("Press 'R' to restart trial");
     
     if (phase === ExperimentPhase.PRACTICE || phase === ExperimentPhase.TIME_TRIAL_PRACTICE) {
-      controls.push("Press 'N' to continue to real trial(s)");
+      controls.push("Press 'N' to continue to real trial");
     }
     
     return (

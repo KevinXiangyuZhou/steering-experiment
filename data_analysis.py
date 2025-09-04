@@ -89,26 +89,25 @@ def draw_trajectory(cursor_x, cursor_y, target_pos, radius,
             # Fill tunnel area with varying widths
             ax.fill_between(xs, lower_boundary, upper_boundary, color='lightgray', alpha=0.3)
             
-            # Draw vertical lines at segment transitions
-            segment_length = (xs[-1] - xs[0]) / 3
-            for i in range(1, 3):
-                transition_x = xs[0] + i * segment_length
-                # Find closest point to transition
-                closest_idx = np.argmin(np.abs(xs - transition_x))
-                if closest_idx < len(xs) and closest_idx > 0:
-                    y_center = ys[closest_idx]
-                    prev_half_width = segment_widths[closest_idx-1] / 2.0
-                    curr_half_width = segment_widths[closest_idx] / 2.0
-                    
-                    # Only draw if there's actually a width change
-                    if abs(prev_half_width - curr_half_width) > 0.001:
-                        # Draw vertical connecting lines
-                        ax.plot([transition_x, transition_x], 
-                               [y_center - prev_half_width, y_center - curr_half_width], 
-                               color='gray', linestyle='-', linewidth=1.0)
-                        ax.plot([transition_x, transition_x], 
-                               [y_center + prev_half_width, y_center + curr_half_width], 
-                               color='gray', linestyle='-', linewidth=1.0)
+            # Draw vertical line at segment transition (2 segments)
+            segment_length = (xs[-1] - xs[0]) / 2
+            transition_x = xs[0] + segment_length
+            # Find closest point to transition
+            closest_idx = np.argmin(np.abs(xs - transition_x))
+            if closest_idx < len(xs) and closest_idx > 0:
+                y_center = ys[closest_idx]
+                prev_half_width = segment_widths[closest_idx-1] / 2.0
+                curr_half_width = segment_widths[closest_idx] / 2.0
+                
+                # Only draw if there's actually a width change
+                if abs(prev_half_width - curr_half_width) > 0.001:
+                    # Draw vertical connecting lines
+                    ax.plot([transition_x, transition_x], 
+                           [y_center - prev_half_width, y_center - curr_half_width], 
+                           color='gray', linestyle='-', linewidth=1.0)
+                    ax.plot([transition_x, transition_x], 
+                           [y_center + prev_half_width, y_center + curr_half_width], 
+                           color='gray', linestyle='-', linewidth=1.0)
         
         elif tunnel_width is not None:
             # Uniform width tunnel (curved)
@@ -176,13 +175,11 @@ def generate_tunnel_path(curvature, tunnel_step=0.002):
     return path
 
 
-def generate_sequential_tunnel_path(segment1_width, segment2_width, segment3_width, tunnel_step=0.002):
-    """Generate sequential horizontal tunnel path with varying segment widths.
+def generate_sequential_tunnel_path(condition, tunnel_step=0.002):
+    """Generate sequential tunnel path with 2 segments.
     
     Args:
-        segment1_width (float): Width of first segment (narrow)
-        segment2_width (float): Width of second segment (wide)
-        segment3_width (float): Width of third segment (narrow)
+        condition (dict): Trial condition with segment parameters
         tunnel_step (float): Step size for generating path points
         
     Returns:
@@ -192,7 +189,7 @@ def generate_sequential_tunnel_path(segment1_width, segment2_width, segment3_wid
     tunnel_start_x = 0.0
     tunnel_end_x = 0.46
     tunnel_y_base = 0.13
-    segment_length = (tunnel_end_x - tunnel_start_x) / 3
+    segment_length = (tunnel_end_x - tunnel_start_x) / 2  # 2 segments instead of 3
     
     path = []
     segment_widths = []
@@ -200,18 +197,31 @@ def generate_sequential_tunnel_path(segment1_width, segment2_width, segment3_wid
     # Generate path points
     x = tunnel_start_x
     while x < tunnel_end_x:
-        y = tunnel_y_base  # Horizontal line
+        y = tunnel_y_base  # Default horizontal line
+        
+        # Apply curvature for straight-to-curved segments
+        if condition.get('segmentType') == 'curvature':
+            if x < tunnel_start_x + segment_length:
+                # First segment: straight (curvature = 0)
+                y = tunnel_y_base
+            else:
+                # Second segment: curved with single peak
+                segment_x = x - (tunnel_start_x + segment_length)
+                amplitude = condition.get('segment2Curvature', 0)
+                segment_width = segment_length
+                # Create a single peak curve using a quadratic function
+                normalized_x = segment_x / segment_width  # 0 to 1
+                y = tunnel_y_base + amplitude * (1 - (2 * normalized_x - 1) ** 2)
+        
         path.append((x, y))
         x += tunnel_step
     
     # Determine segment widths for each point
     for i, (x, y) in enumerate(path):
         if x < tunnel_start_x + segment_length:
-            segment_widths.append(segment1_width)
-        elif x < tunnel_start_x + 2 * segment_length:
-            segment_widths.append(segment2_width)
+            segment_widths.append(condition['segment1Width'])
         else:
-            segment_widths.append(segment3_width)
+            segment_widths.append(condition['segment2Width'])
     
     return path, segment_widths
 
@@ -313,13 +323,8 @@ def analyze_json_data(json_file_path, output_dir=None):
         segment_widths = None
         
         if tunnel_type == 'sequential':
-            # Sequential tunnel with varying segment widths
-            segment1_width = condition.get('segment1Width', 0.015)
-            segment2_width = condition.get('segment2Width', 0.025)
-            segment3_width = condition.get('segment3Width', 0.015)
-            tunnel_path, segment_widths = generate_sequential_tunnel_path(
-                segment1_width, segment2_width, segment3_width
-            )
+            # Sequential tunnel with 2 segments
+            tunnel_path, segment_widths = generate_sequential_tunnel_path(condition)
         else:
             # Curved tunnel with uniform width
             tunnel_curvature = condition.get('curvature', 0.01)
