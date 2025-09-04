@@ -1,0 +1,22 @@
+// More Secure Firestore Rules
+// Use this if you want to restrict data access
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /experiments/{document} {
+      // Allow anyone to write (for data collection)
+      allow write: if true;
+      
+      // Only allow reads from authenticated users or specific conditions
+      // Option A: Allow reads only if you're authenticated
+      allow read: if request.auth != null;
+      
+      // Option B: Allow reads only during specific time windows
+      // allow read: if request.time > timestamp.date(2024, 1, 1);
+      
+      // Option C: Allow reads only from specific IP addresses
+      // allow read: if request.auth.token.admin == true;
+    }
+  }
+}

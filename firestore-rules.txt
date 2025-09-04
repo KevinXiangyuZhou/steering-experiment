@@ -1,0 +1,14 @@
+// Firestore Security Rules for Steering Experiment
+// Copy these rules to your Firebase Console > Firestore Database > Rules
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Allow anyone to write to experiments collection (for data collection)
+    match /experiments/{document} {
+      allow write: if true;
+      // Allow reads for data analysis (you can restrict this further if needed)
+      allow read: if true;
+    }
+  }
+}

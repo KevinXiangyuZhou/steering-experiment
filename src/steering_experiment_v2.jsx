@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { uploadExperimentDataWithRetry, isFirebaseConfigured } from './firebaseService.js';
 
 // Experiment phases
 const ExperimentPhase = {
@@ -49,17 +50,17 @@ const TIME_CONDITIONS = [
 
 // Sequential tunnel conditions (narrow-wide-narrow segments)
 const SEQUENTIAL_CONDITIONS = [
-  { id: 19, tunnelType: 'sequential', segment1Width: 0.015, segment2Width: 0.025, segment3Width: 0.015, timeLimit: null, description: "narrow-wide-narrow segments (15-25-15)" },
-  { id: 20, tunnelType: 'sequential', segment1Width: 0.015, segment2Width: 0.035, segment3Width: 0.015, timeLimit: null, description: "narrow-wide-narrow segments (15-35-15)" },
-  { id: 21, tunnelType: 'sequential', segment1Width: 0.020, segment2Width: 0.030, segment3Width: 0.020, timeLimit: null, description: "narrow-wide-narrow segments (20-30-20)" },
+  // { id: 19, tunnelType: 'sequential', segment1Width: 0.015, segment2Width: 0.025, segment3Width: 0.015, timeLimit: null, description: "narrow-wide-narrow segments (15-25-15)" },
+  // { id: 20, tunnelType: 'sequential', segment1Width: 0.015, segment2Width: 0.035, segment3Width: 0.015, timeLimit: null, description: "narrow-wide-narrow segments (15-35-15)" },
+  // { id: 21, tunnelType: 'sequential', segment1Width: 0.020, segment2Width: 0.030, segment3Width: 0.020, timeLimit: null, description: "narrow-wide-narrow segments (20-30-20)" },
   { id: 22, tunnelType: 'sequential', segment1Width: 0.010, segment2Width: 0.040, segment3Width: 0.010, timeLimit: null, description: "narrow-wide-narrow segments (10-40-10)" },
 ];
 
 // Sequential tunnel time-constrained conditions
 const SEQUENTIAL_TIME_CONDITIONS = [
-  { id: 23, tunnelType: 'sequential', segment1Width: 0.015, segment2Width: 0.025, segment3Width: 0.015, timeLimit: 6.0, description: "narrow-wide-narrow segments (15-25-15), 6s limit" },
-  { id: 24, tunnelType: 'sequential', segment1Width: 0.015, segment2Width: 0.035, segment3Width: 0.015, timeLimit: 5.0, description: "narrow-wide-narrow segments (15-35-15), 5s limit" },
-  { id: 25, tunnelType: 'sequential', segment1Width: 0.020, segment2Width: 0.030, segment3Width: 0.020, timeLimit: 4.0, description: "narrow-wide-narrow segments (20-30-20), 4s limit" },
+  // { id: 23, tunnelType: 'sequential', segment1Width: 0.015, segment2Width: 0.025, segment3Width: 0.015, timeLimit: 6.0, description: "narrow-wide-narrow segments (15-25-15), 6s limit" },
+  // { id: 24, tunnelType: 'sequential', segment1Width: 0.015, segment2Width: 0.035, segment3Width: 0.015, timeLimit: 5.0, description: "narrow-wide-narrow segments (15-35-15), 5s limit" },
+  // { id: 25, tunnelType: 'sequential', segment1Width: 0.020, segment2Width: 0.030, segment3Width: 0.020, timeLimit: 4.0, description: "narrow-wide-narrow segments (20-30-20), 4s limit" },
   { id: 26, tunnelType: 'sequential', segment1Width: 0.010, segment2Width: 0.040, segment3Width: 0.010, timeLimit: 7.0, description: "narrow-wide-narrow segments (10-40-10), 7s limit" },
 ];
 
@@ -88,6 +89,11 @@ const HumanSteeringExperiment = () => {
   const [trajectoryPoints, setTrajectoryPoints] = useState([]);
   const [speedHistory, setSpeedHistory] = useState([]);
   const [timestampHistory, setTimestampHistory] = useState([]);
+  
+  // Upload state
+  const [uploadStatus, setUploadStatus] = useState('idle'); // 'idle', 'uploading', 'success', 'error'
+  const [uploadError, setUploadError] = useState(null);
+  const [uploadedDocId, setUploadedDocId] = useState(null);
   const [excursionEvents, setExcursionEvents] = useState([]);
   const [excursionMarkers, setExcursionMarkers] = useState([]); // New: markers for boundary excursions
   const [hasExcursionMarker, setHasExcursionMarker] = useState(false); // Track if excursion already marked
@@ -806,6 +812,48 @@ const HumanSteeringExperiment = () => {
     URL.revokeObjectURL(url);
   };
 
+  const uploadData = async () => {
+    if (!isFirebaseConfigured()) {
+      setUploadError('Firebase not configured. Please check your configuration.');
+      setUploadStatus('error');
+      return;
+    }
+
+    setUploadStatus('uploading');
+    setUploadError(null);
+
+    try {
+      const data = {
+        participantId,
+        trialData,
+        summary: {
+          totalTrials: trialData.length,
+          averageCompletionTime: trialData.reduce((sum, t) => sum + t.completionTime, 0) / trialData.length,
+          averageBoundaryViolationRate: trialData.reduce((sum, t) => sum + t.boundaryViolationRate, 0) / trialData.length,
+          timeoutFailures: trialData.filter(t => t.failedDueToTimeout).length
+        },
+        experimentVersion: '2.0',
+        completedAt: new Date().toISOString()
+      };
+
+      const docId = await uploadExperimentDataWithRetry(data);
+      setUploadedDocId(docId);
+      setUploadStatus('success');
+    } catch (error) {
+      console.error('Upload failed:', error);
+      setUploadError(error.message);
+      setUploadStatus('error');
+    }
+  };
+
+  const handleCompleteExperiment = async () => {
+    // Try to upload data first
+    await uploadData();
+    
+    // Also download data as backup
+    downloadData();
+  };
+
   // Helper function to check if we should show timer bar area
   const shouldShowTimerArea = () => {
     return phase === ExperimentPhase.TIME_TRIAL_PRACTICE && timeLimit;
@@ -869,16 +917,80 @@ const HumanSteeringExperiment = () => {
       case ExperimentPhase.COMPLETE:
         return (
           <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
-            <div className="bg-white rounded-lg shadow-lg p-12 text-center">
+            <div className="bg-white rounded-lg shadow-lg p-12 text-center max-w-md">
               <h2 className="text-2xl font-bold text-green-600 mb-6">Experiment Complete!</h2>
               <p className="mb-6">All trials completed successfully!</p>
-              <button
-                onClick={downloadData}
-                className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mb-4"
-              >
-                Download Data
-              </button>
-              <p>Thank you for participating!</p>
+              
+              {/* Upload Status */}
+              {uploadStatus === 'idle' && (
+                <div className="mb-6">
+                  <button
+                    onClick={handleCompleteExperiment}
+                    className="bg-green-500 hover:bg-green-700 text-white font-bold py-3 px-6 rounded mb-4 w-full"
+                  >
+                    Save Data & Download
+                  </button>
+                  <p className="text-sm text-gray-600">Data will be automatically saved to our database</p>
+                </div>
+              )}
+              
+              {uploadStatus === 'uploading' && (
+                <div className="mb-6">
+                  <div className="flex items-center justify-center mb-4">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                    <span className="ml-3 text-blue-600">Uploading data...</span>
+                  </div>
+                  <p className="text-sm text-gray-600">Please wait while we save your data</p>
+                </div>
+              )}
+              
+              {uploadStatus === 'success' && (
+                <div className="mb-6">
+                  <div className="text-green-600 mb-4">
+                    <svg className="w-12 h-12 mx-auto mb-2" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                    <p className="font-semibold">Data saved successfully!</p>
+                  </div>
+                  {uploadedDocId && (
+                    <p className="text-xs text-gray-500 mb-4">Reference ID: {uploadedDocId}</p>
+                  )}
+                  <button
+                    onClick={downloadData}
+                    className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+                  >
+                    Download Backup Copy
+                  </button>
+                </div>
+              )}
+              
+              {uploadStatus === 'error' && (
+                <div className="mb-6">
+                  <div className="text-red-600 mb-4">
+                    <svg className="w-12 h-12 mx-auto mb-2" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                    </svg>
+                    <p className="font-semibold">Upload failed</p>
+                  </div>
+                  <p className="text-sm text-red-600 mb-4">{uploadError}</p>
+                  <div className="space-y-2">
+                    <button
+                      onClick={uploadData}
+                      className="bg-orange-500 hover:bg-orange-700 text-white font-bold py-2 px-4 rounded w-full"
+                    >
+                      Retry Upload
+                    </button>
+                    <button
+                      onClick={downloadData}
+                      className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded w-full"
+                    >
+                      Download Data Only
+                    </button>
+                  </div>
+                </div>
+              )}
+              
+              <p className="text-gray-600">Thank you for participating!</p>
             </div>
           </div>
         );

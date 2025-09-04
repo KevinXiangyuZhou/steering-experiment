@@ -171,6 +171,7 @@ profile.json
 **/doms/**
 **/parsed_doms/**
 **/user_data/**
+**/participant_data/**
 
 # Cache
 **/results/**
@@ -180,3 +181,6 @@ profile.json
 graph_data.json
 output.txt
 **/outputs/**
+
+# Firebase configuration (contains sensitive API keys)
+src/firebaseConfig.js
