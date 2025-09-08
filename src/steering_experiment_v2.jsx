@@ -130,7 +130,7 @@ const HumanSteeringExperiment = () => {
 
   // Check if current phase should enforce boundary constraints (interrupt on violation)
   const shouldEnforceBoundaries = useCallback(() => {
-    return phase === ExperimentPhase.MAIN_TRIALS || phase === ExperimentPhase.SEQUENTIAL_TRIALS;
+    return phase === ExperimentPhase.PRACTICE || phase === ExperimentPhase.MAIN_TRIALS || phase === ExperimentPhase.SEQUENTIAL_TRIALS;
   }, [phase]);
 
   // Check if current phase should mark boundary violations (but not interrupt)
@@ -911,7 +911,7 @@ const HumanSteeringExperiment = () => {
           totalTrials: trialData.length,
           averageCompletionTime: trialData.reduce((sum, t) => sum + t.completionTime, 0) / trialData.length,
         },
-        experimentVersion: '2.0',
+        experimentVersion: '3.0',
         completedAt: new Date().toISOString()
       };
 
@@ -1176,7 +1176,7 @@ const HumanSteeringExperiment = () => {
         return (
           <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-6">
             <div className="bg-white rounded-lg shadow-lg p-8 max-w-3xl">
-            <h2 className="text-2xl font-bold text-red-600 mb-6">Time-Constrained Trials</h2>
+            <h2 className="text-2xl font-bold text-red-600 mb-6">Time-Constrained Trials (Please read carefully):</h2>
             <p className="mb-4">
               In this part of the experiment, you must complete each task within a set time limit.
             </p>
@@ -1184,7 +1184,7 @@ const HumanSteeringExperiment = () => {
               <li>Each trial has a different time limit.</li>
               <li>Before each new type of timed trial, you’ll complete one practice round with a visible timer.</li>
               <li>During practice, learn the timing; in the actual trial, the timer won’t be shown but the limit will still apply.</li>
-              <li>You may cross the boundary, but aim to follow the tunnel as closely as possible.</li>
+              <li>You may cross the boundary in these trials, but aim to follow the tunnel as closely as possible.</li>
               <li>Balance speed and accuracy — the goal is to finish right as the time runs out.</li>
             </ul>
             <p className="font-semibold">Press SPACEBAR to begin time-constrained trials.</p>
@@ -1330,9 +1330,9 @@ const HumanSteeringExperiment = () => {
             </div>
             
             {/* Failure overlay */}
-            {trialState === TrialState.FAILED && (
+            {trialState === TrialState.FAILED && (phase == ExperimentPhase.TIME_TRIALS || phase == ExperimentPhase.SEQUENTIAL_TIME_TRIALS || phase == ExperimentPhase.TIME_TRIAL_PRACTICE) && (
               <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-                <div className="bg-white rounded-lg p-8 text-center">
+                <div className="bg-gray-100 rounded-lg p-8 text-center">
                   <h3 className="text-xl font-bold mb-4 text-red-600">
                     {failedDueToTimeout ? "TIME'S UP!" : "TRIAL FAILED"}
                   </h3>
@@ -1386,7 +1386,7 @@ const HumanSteeringExperiment = () => {
     
     // Show phase and trial info
     if (phase === ExperimentPhase.PRACTICE) {
-      statusText = "PRACTICE ROUND";
+      statusText = "[Practice Round]";
       statusColor = "text-green-600";
     } else if (phase === ExperimentPhase.MAIN_TRIALS && currentTrial < currentConditions.length) {
       statusText = `Trial ${getNormalTrialNumber()}/${getNormalTotalTrials()}`;
@@ -1411,25 +1411,38 @@ const HumanSteeringExperiment = () => {
       stateText = "Click the green button to begin";
     } else if (trialState === TrialState.IN_PROGRESS) {
       stateText = "Navigate to the red target";
+    } else if (trialState === TrialState.FAILED) {
+      stateText = "Trial failed, please try again";
     }
     
     return (
       <div className="space-y-1">
-        {statusText && <p className={`font-semibold ${statusColor}`}>{statusText}</p>}
-        {stateText && <p className="text-gray-700">{stateText}</p>}
+        {statusText && <p className={`text-sm ${statusColor}`}>{statusText}</p>}
+        {stateText && <p className="text-lg font-bold gray-red-900">{stateText}</p>}
       </div>
     );
   };
 
   const renderSimpleControls = () => {
     const controls = [];
-    
-    controls.push("Press 'R' to restart trial");
-    
-    if (phase === ExperimentPhase.PRACTICE || phase === ExperimentPhase.TIME_TRIAL_PRACTICE) {
-      controls.push("Press 'N' to continue to real trial");
+  
+    controls.push(
+      <>
+        Press <span className="font-bold text-blue-600">'R'</span> to restart trial at any time
+      </>
+    );
+  
+    if (
+      phase === ExperimentPhase.PRACTICE ||
+      phase === ExperimentPhase.TIME_TRIAL_PRACTICE
+    ) {
+      controls.push(
+        <>
+          Press <span className="font-bold text-blue-600">'N'</span> to continue to real trial
+        </>
+      );
     }
-    
+  
     return (
       <div className="mt-2 text-sm text-gray-600">
         {controls.map((control, index) => (
