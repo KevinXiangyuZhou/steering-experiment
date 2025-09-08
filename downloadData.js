@@ -37,7 +37,7 @@ async function downloadAllData() {
     });
     
     // Save to file
-    const filename = `all_experiment_data_${new Date().toISOString().split('T')[0]}.json`;
+    const filename = `./participant_data/all_experiment_data_${new Date().toISOString().split('T')[0]}.json`;
     fs.writeFileSync(filename, JSON.stringify(allData, null, 2));
     
     console.log(`✅ Downloaded ${allData.length} experiments to ${filename}`);

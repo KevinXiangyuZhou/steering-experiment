@@ -1,6 +1,8 @@
 """
 Data Analysis Script for React Steering Experiment
-Generates trajectory and speed plots from JSON data files
+Generates trajectory and speed plots from JSON data files for multiple participants
+Example usage:
+python data_analysis.py ./participant_data/ ./results/
 """
 
 import json
@@ -10,6 +12,7 @@ from matplotlib import pyplot as plt
 from matplotlib.patches import Circle
 import argparse
 from pathlib import Path
+import glob
 
 
 def draw_speed_profile(speeds, save_path="speed_profile.png", title="Speed Profile"):
@@ -246,30 +249,27 @@ def extract_excursion_positions(excursions):
     return positions
 
 
-def analyze_json_data(json_file_path, output_dir=None):
+def analyze_json_data(json_file_path, participant_output_dir):
     """Analyze JSON data from React steering experiment and generate plots.
     
     Args:
         json_file_path (str): Path to JSON data file
-        output_dir (str, optional): Directory to save plots. If None, saves next to JSON file.
+        participant_output_dir (str): Directory to save plots for this participant
     """
     # Load JSON data
     with open(json_file_path, 'r') as f:
         data = json.load(f)
     
-    # Set up output directory
-    if output_dir is None:
-        output_dir = Path(json_file_path).parent / "plots"
-    else:
-        output_dir = Path(output_dir)
-    
-    output_dir.mkdir(exist_ok=True)
+    # Set up output directory for this participant
+    participant_output_dir = Path(participant_output_dir)
+    participant_output_dir.mkdir(parents=True, exist_ok=True)
     
     participant_id = data.get('participantId', 'unknown')
     trial_data_list = data.get('trialData', [])
     
     print(f"Processing data for participant: {participant_id}")
     print(f"Number of trials: {len(trial_data_list)}")
+    print(f"Output directory: {participant_output_dir}")
     
     # Environment constants (from React code)
     WINDOW_WIDTH = 0.4608  # From CANVAS_WIDTH / SCALE
@@ -340,8 +340,8 @@ def analyze_json_data(json_file_path, output_dir=None):
         
         # Generate file names
         trial_prefix = f"trial_{trial_id}_{participant_id}"
-        trajectory_file = output_dir / f"trajectory_{trial_prefix}.png"
-        speed_file = output_dir / f"speed_{trial_prefix}.png"
+        trajectory_file = participant_output_dir / f"trajectory_{trial_prefix}.png"
+        speed_file = participant_output_dir / f"speed_{trial_prefix}.png"
         
         # Create trajectory plot
         trajectory_title = f"Trial {trial_id}: {condition.get('description', 'Unknown condition')}"
@@ -376,21 +376,21 @@ def analyze_json_data(json_file_path, output_dir=None):
         print(f"  - Excursions: {len(excursion_positions)}")
         print()
     
-    print(f"Analysis complete! Plots saved to: {output_dir}")
+    print(f"Analysis complete! Plots saved to: {participant_output_dir}")
     
     # Generate summary statistics
-    generate_summary_stats(trial_data_list, output_dir, participant_id)
+    generate_summary_stats(trial_data_list, participant_output_dir, participant_id)
 
 
-def generate_summary_stats(trial_data_list, output_dir, participant_id):
+def generate_summary_stats(trial_data_list, participant_output_dir, participant_id):
     """Generate summary statistics and save to text file.
     
     Args:
         trial_data_list (list): List of trial data dictionaries
-        output_dir (Path): Output directory
+        participant_output_dir (Path): Output directory for this participant
         participant_id (str): Participant ID
     """
-    summary_file = output_dir / f"summary_stats_{participant_id}.txt"
+    summary_file = participant_output_dir / f"summary_stats_{participant_id}.txt"
     
     # Separate trials by type
     basic_trials = [t for t in trial_data_list if t.get('condition', {}).get('timeLimit') is None]
@@ -473,22 +473,72 @@ def generate_summary_stats(trial_data_list, output_dir, participant_id):
     print(f"Summary statistics saved to: {summary_file}")
 
 
+def process_participant_data(input_dir, output_dir):
+    """Process all participant data files in the input directory.
+    
+    Args:
+        input_dir (str): Directory containing participant JSON files
+        output_dir (str): Directory to store analysis results
+    """
+    input_path = Path(input_dir)
+    output_path = Path(output_dir)
+    
+    if not input_path.exists():
+        print(f"Error: Input directory not found: {input_dir}")
+        return
+    
+    # Create output directory if it doesn't exist
+    output_path.mkdir(parents=True, exist_ok=True)
+    
+    # Find all JSON files in the input directory
+    json_files = list(input_path.glob("*.json"))
+    
+    if not json_files:
+        print(f"No JSON files found in {input_dir}")
+        return
+    
+    print(f"Found {len(json_files)} JSON files to process")
+    print(f"Output directory: {output_path}")
+    print("-" * 50)
+    
+    # Process each participant file
+    for json_file in json_files:
+        try:
+            # Extract participant ID from filename or load from JSON
+            with open(json_file, 'r') as f:
+                data = json.load(f)
+            participant_id = data.get('participantId', json_file.stem)
+            
+            # Create participant-specific output directory
+            participant_output_dir = output_path / f"participant_{participant_id}"
+            
+            print(f"\nProcessing: {json_file.name}")
+            print(f"Participant ID: {participant_id}")
+            
+            # Analyze this participant's data
+            analyze_json_data(json_file, participant_output_dir)
+            
+        except Exception as e:
+            print(f"Error processing {json_file.name}: {e}")
+            continue
+    
+    print("\n" + "=" * 50)
+    print("All participants processed!")
+    print(f"Results saved in: {output_path}")
+
+
 def main():
     """Main function to run data analysis from command line."""
-    parser = argparse.ArgumentParser(description='Analyze React steering experiment data')
-    parser.add_argument('json_file', help='Path to JSON data file')
-    parser.add_argument('--output-dir', '-o', help='Output directory for plots (default: next to JSON file)')
+    parser = argparse.ArgumentParser(description='Analyze React steering experiment data for multiple participants')
+    parser.add_argument('input_dir', help='Directory containing participant JSON data files')
+    parser.add_argument('output_dir', help='Directory to store analysis results')
     
     args = parser.parse_args()
     
-    if not os.path.exists(args.json_file):
-        print(f"Error: JSON file not found: {args.json_file}")
-        return
-    
     try:
-        analyze_json_data(args.json_file, args.output_dir)
+        process_participant_data(args.input_dir, args.output_dir)
     except Exception as e:
-        print(f"Error analyzing data: {e}")
+        print(f"Error processing data: {e}")
         raise
 
 
