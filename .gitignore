@@ -184,3 +184,11 @@ output.txt
 
 # Firebase configuration (contains sensitive API keys)
 src/firebaseConfig.js
+
+#ignore script for downloading data
+downloadData.js
+downloadDataAdmin.js
+
+#ignore participant data
+participant_data/
+
