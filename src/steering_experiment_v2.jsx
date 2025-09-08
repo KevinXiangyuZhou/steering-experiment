@@ -5,6 +5,7 @@ import { Monitor, Mouse, Settings, Eye, Users, CheckCircle, AlertTriangle, Credi
 // Experiment phases
 const ExperimentPhase = {
   ENVIRONMENT_SETUP: 'environment_setup',
+  SCREEN_CALIBRATION: 'screen_calibration',
   WELCOME: 'welcome',
   INSTRUCTIONS: 'instructions',
   PRACTICE: 'practice',
@@ -233,6 +234,12 @@ const HumanSteeringExperiment = () => {
           break;
 
         case ExperimentPhase.ENVIRONMENT_SETUP:
+          if (event.key === ' ') {
+            setPhase(ExperimentPhase.SCREEN_CALIBRATION);
+          }
+          break;
+
+        case ExperimentPhase.SCREEN_CALIBRATION:
           if (event.key === ' ') {
             setPhase(ExperimentPhase.INSTRUCTIONS);
           }
@@ -991,9 +998,10 @@ const HumanSteeringExperiment = () => {
                       <div className="bg-gray-50 rounded-lg p-4">
                         <h3 className="font-semibold text-gray-800 mb-2 text-sm">Windows</h3>
                         <div className="text-xs text-gray-600 space-y-1">
-                          <p>• Control Panel → Mouse → Pointer Options</p>
-                          <p>• Uncheck "Enhance pointer precision"</p>
-                          <p>• Set speed to middle position</p>
+                        <p>• Open Control Panel → Hardware and Sound → Devices and Printers → Mouse</p>
+                        <p>• Go to the "Pointer Options" tab</p>
+                        <p>• Uncheck "Enhance pointer precision"</p>
+                        <p>• Set the pointer speed slider to the middle position</p>
                         </div>
                       </div>
                       
@@ -1002,7 +1010,7 @@ const HumanSteeringExperiment = () => {
                         <div className="text-xs text-gray-600 space-y-1">
                           <p>• System Preferences → Mouse</p>
                           <p>• Set Tracking Speed to middle (4th from left)</p>
-                          <p>• Advanced → disable Pointer acceleration</p>
+                          <p>• Click on advanced → disable Pointer acceleration</p>
                         </div>
                       </div>
                     </div>
@@ -1017,13 +1025,7 @@ const HumanSteeringExperiment = () => {
                     </div>
                     <div className="bg-gray-50 rounded-lg p-4 space-y-2">
                       <p className="text-sm text-gray-700">
-                        <strong>1.</strong> Make browser full screen: <kbd className="bg-gray-200 px-1 py-0.5 rounded text-xs">F11</kbd> (Windows) or <kbd className="bg-gray-200 px-1 py-0.5 rounded text-xs">⌘⌃F</kbd> (Mac)
-                      </p>
-                      <p className="text-sm text-gray-700">
-                        <strong>2.</strong> Set browser zoom to <strong>100%</strong>
-                      </p>
-                      <p className="text-sm text-gray-700">
-                        <strong>3.</strong> Hold a credit card against the screen when prompted to calibrate measurements
+                        <strong></strong> Make browser full screen: <kbd className="bg-gray-200 px-1 py-0.5 rounded text-xs">F11</kbd> (Windows) or <kbd className="bg-gray-200 px-1 py-0.5 rounded text-xs">⌘⌃F</kbd> (Mac)
                       </p>
                     </div>
                   </div>
@@ -1037,8 +1039,10 @@ const HumanSteeringExperiment = () => {
                     </div>
                     <div className="bg-gray-50 rounded-lg p-4">
                       <p className="text-sm text-gray-700">
-                        Sit at <strong>arm's length</strong> from the monitor and stay in the same position during the experiment.
-                        Readjust to comfortable position at the beginning of each trial.
+                        Sit about one arm’s length away from the monitor and try to keep the same position during the experiment.
+                      </p>
+                      <p>
+                      At the start of each trial, adjust your posture so you are comfortable.
                       </p>
                     </div>
                   </div>
@@ -1075,6 +1079,66 @@ const HumanSteeringExperiment = () => {
           </div>
         );
 
+      case ExperimentPhase.SCREEN_CALIBRATION:
+        return (
+          <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-4">
+            <div className="max-w-4xl mx-auto">
+              <div className="bg-white rounded-2xl shadow-2xl overflow-hidden border border-gray-100">
+                {/* Header */}
+                <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white p-6 text-center">
+                  <div className="flex items-center justify-center mb-2">
+                    <CreditCard className="w-8 h-8 mr-3" />
+                    <h1 className="text-3xl font-bold">Screen Calibration</h1>
+                  </div>
+                  <p className="text-lg text-blue-100">Calibrate your screen using a credit card</p>
+                </div>
+                
+                {/* Content */}
+                <div className="p-6">
+                  {/* Instructions */}
+                  <div className="text-center mb-6">
+                    <div className="bg-blue-50 rounded-lg p-4 mb-4">
+                      <p className="text-gray-700">
+                        Hold your <strong>credit card</strong> against the window below and adjust browser zoom until they match
+                      </p>
+                    </div>
+                    
+                    <div className="space-y-2 text-sm text-gray-600 max-w-lg mx-auto">
+                      <p>Use Ctrl/⌘ + "+" or "−" to adjust zoom</p>
+                    </div>
+                  </div>
+                  
+                  {/* Calibration Window */}
+                  <div className="flex justify-center mb-6">
+                    <div className="bg-gray-100 border-2 border-dashed border-gray-400 rounded-lg p-6">
+                      <div 
+                        className="bg-blue-200 border-2 border-blue-400 rounded"
+                        style={{
+                          width: '340px',  // Same width as experiment canvas
+                          height: '200px', // Same height as experiment canvas
+                          position: 'relative'
+                        }}
+                      >
+                        <div className="absolute inset-0 flex items-center justify-center">
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Continue Button */}
+                  <div className="text-center">
+                    <div className="bg-white border-4 border-blue-600 px-8 py-4 rounded-2xl inline-block shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105">
+                      <div className="text-lg font-semibold text-gray-600">
+                        Press <kbd className="bg-gray-200 text-gray-800 px-2 py-1 rounded text-lg font-bold">SPACEBAR</kbd> when done
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+
       case ExperimentPhase.WELCOME:
         return (
           <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
@@ -1089,7 +1153,7 @@ const HumanSteeringExperiment = () => {
         return (
           <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-6">
             <div className="bg-white rounded-lg shadow-lg p-8 max-w-3xl">
-              <h2 className="text-2xl font-bold text-red-600 mb-6">Steering Task Instructions:</h2>
+              <h2 className="text-2xl font-bold text-red-600 mb-6">Task Instructions (Please read carefully):</h2>
               <ul className="space-y-3 mb-6">
                 <li>Click the green START button to begin each trial</li>
                 <li>Navigate through the tunnel to reach the red target</li>
