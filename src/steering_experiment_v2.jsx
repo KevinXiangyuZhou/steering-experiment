@@ -2,6 +2,16 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { uploadExperimentDataWithRetry, isFirebaseConfigured } from './firebaseService.js';
 import { Monitor, Mouse, Settings, Eye, Users, CheckCircle, AlertTriangle, CreditCard } from 'lucide-react';
 
+// Function to extract URL parameters
+const getUrlParameters = () => {
+  const urlParams = new URLSearchParams(window.location.search);
+  return {
+    prolificPid: urlParams.get('PROLIFIC_PID') || null,
+    studyId: urlParams.get('STUDY_ID') || null,
+    sessionId: urlParams.get('SESSION_ID') || null
+  };
+};
+
 // Experiment phases
 const ExperimentPhase = {
   ENVIRONMENT_SETUP: 'environment_setup',
@@ -86,6 +96,7 @@ const HumanSteeringExperiment = () => {
   const [phase, setPhase] = useState(ExperimentPhase.WELCOME);
   const [trialState, setTrialState] = useState(TrialState.WAITING_FOR_START);
   const [participantId, setParticipantId] = useState('');
+  const [prolificData, setProlificData] = useState({});
   const [currentTrial, setCurrentTrial] = useState(0);
   const [currentConditions, setCurrentConditions] = useState([]);
   const [isPractice, setIsPractice] = useState(false);
@@ -132,6 +143,19 @@ const HumanSteeringExperiment = () => {
   const shouldEnforceBoundaries = useCallback(() => {
     return phase === ExperimentPhase.PRACTICE || phase === ExperimentPhase.MAIN_TRIALS || phase === ExperimentPhase.SEQUENTIAL_TRIALS;
   }, [phase]);
+
+  // Extract URL parameters on component mount
+  useEffect(() => {
+    const urlParams = getUrlParameters();
+    setProlificData(urlParams);
+    
+    // Generate participant ID with Prolific data if available
+    if (urlParams.prolificPid) {
+      setParticipantId(`P${urlParams.prolificPid}`);
+    } else {
+      setParticipantId(`P${new Date().toTimeString().slice(0,8).replace(/:/g,'')}`);
+    }
+  }, []);
 
   // Check if current phase should mark boundary violations (but not interrupt)
   const shouldMarkBoundaries = useCallback(() => {
@@ -569,6 +593,7 @@ const HumanSteeringExperiment = () => {
     const currentCondition = currentConditions[currentTrial];
     const trialResult = {
       participantId,
+      prolificData,
       trialId: currentCondition.id,
       condition: currentCondition,
       trajectory: [...trajectoryPoints],
@@ -877,6 +902,7 @@ const HumanSteeringExperiment = () => {
   const downloadData = () => {
     const data = {
       participantId,
+      prolificData,
       trialData,
       summary: {
         totalTrials: trialData.length,
@@ -906,6 +932,7 @@ const HumanSteeringExperiment = () => {
     try {
       const data = {
         participantId,
+        prolificData,
         trialData,
         summary: {
           totalTrials: trialData.length,
@@ -1231,6 +1258,19 @@ const HumanSteeringExperiment = () => {
                     </svg>
                     <p className="font-semibold">Data uploaded successfully!</p>
                   </div>
+                  
+                  {/* Prolific Information */}
+                  {prolificData.prolificPid && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                      <h3 className="font-semibold text-blue-800 mb-2">Your Prolific Information:</h3>
+                      <div className="text-sm text-blue-700 space-y-1">
+                        <p><strong>Participant ID:</strong> {prolificData.prolificPid}</p>
+                        {prolificData.studyId && <p><strong>Study ID:</strong> {prolificData.studyId}</p>}
+                        {prolificData.sessionId && <p><strong>Session ID:</strong> {prolificData.sessionId}</p>}
+                      </div>
+                    </div>
+                  )}
+                  
                   {/* {uploadedDocId && (
                     <p className="text-xs text-gray-500 mb-4">Reference ID: {uploadedDocId}</p>
                   )} */}
