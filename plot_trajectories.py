@@ -13,26 +13,285 @@ from matplotlib.patches import Circle
 import argparse
 from pathlib import Path
 import glob
+from scipy.signal import find_peaks, savgol_filter, butter, filtfilt
+from scipy.ndimage import gaussian_filter1d
 
 
-def draw_speed_profile(speeds, save_path="speed_profile.png", title="Speed Profile"):
+def apply_noise_filtering(speeds, filter_type='savgol', **kwargs):
+    """Apply various noise filtering techniques to speed data.
+    
+    Args:
+        speeds (np.ndarray): Raw speed data
+        filter_type (str): Type of filter to apply
+        **kwargs: Additional parameters for specific filters
+        
+    Returns:
+        np.ndarray: Filtered speed data
+    """
+    if len(speeds) < 3:
+        return speeds
+    
+    speeds_array = np.array(speeds)
+    
+    if filter_type == 'savgol':
+        # Savitzky-Golay filter - preserves peaks while smoothing
+        window_length = kwargs.get('window_length', min(11, len(speeds_array) // 3 * 2 + 1))
+        if window_length % 2 == 0:
+            window_length += 1  # Must be odd
+        # Ensure window length doesn't exceed data length
+        window_length = min(window_length, len(speeds_array))
+        if window_length < 3:
+            return speeds_array  # Too short for filtering
+        polyorder = kwargs.get('polyorder', min(3, window_length - 1))
+        return savgol_filter(speeds_array, window_length, polyorder)
+    
+    elif filter_type == 'gaussian':
+        # Gaussian filter - smooth but may blur sharp features
+        sigma = kwargs.get('sigma', 1.0)
+        return gaussian_filter1d(speeds_array, sigma)
+    
+    elif filter_type == 'butterworth':
+        # Butterworth low-pass filter - good frequency domain filtering
+        cutoff = kwargs.get('cutoff', 0.1)  # Normalized frequency
+        order = kwargs.get('order', 3)
+        b, a = butter(order, cutoff, btype='low', analog=False)
+        return filtfilt(b, a, speeds_array)
+    
+    elif filter_type == 'moving_average':
+        # Simple moving average
+        window_size = kwargs.get('window_size', 5)
+        return np.convolve(speeds_array, np.ones(window_size)/window_size, mode='same')
+    
+    elif filter_type == 'median':
+        # Median filter - good for removing outliers
+        kernel_size = kwargs.get('kernel_size', 5)
+        from scipy.ndimage import median_filter
+        return median_filter(speeds_array, size=kernel_size)
+    
+    elif filter_type == 'adaptive':
+        # Adaptive filtering - combines multiple methods
+        # First apply median to remove outliers
+        from scipy.ndimage import median_filter
+        cleaned = median_filter(speeds_array, size=3)
+        # Then apply Savitzky-Golay for smoothing
+        window_length = min(11, len(cleaned) // 3 * 2 + 1)
+        if window_length % 2 == 0:
+            window_length += 1
+        return savgol_filter(cleaned, window_length, 3)
+    
+    else:
+        return speeds_array
+
+
+def parse_filter_params(param_string):
+    """Parse filter parameters from command line string.
+    
+    Args:
+        param_string (str): Comma-separated key=value pairs
+        
+    Returns:
+        dict: Parsed parameters
+    """
+    if not param_string:
+        return {}
+    
+    params = {}
+    for pair in param_string.split(','):
+        if '=' in pair:
+            key, value = pair.strip().split('=', 1)
+            # Try to convert to appropriate type
+            try:
+                if '.' in value:
+                    params[key] = float(value)
+                else:
+                    params[key] = int(value)
+            except ValueError:
+                params[key] = value
+    return params
+
+
+def detect_speed_drops(speeds, min_drop_ratio=0.3, min_drop_duration=3, debug=False):
+    """Detect significant speed drops in the speed profile.
+    
+    Simple approach: For each peak, find the very next local minimum that follows it.
+    The time between peak and valley is the duration, and the proportional difference is the ratio.
+    
+    Args:
+        speeds (list or np.ndarray): Speed values over time
+        min_drop_ratio (float): Minimum ratio of speed drop to be considered significant (0-1)
+        min_drop_duration (int): Minimum duration of drop in time steps
+        debug (bool): Whether to print debug information
+        
+    Returns:
+        tuple: (drop_indices, peak_indices) - Indices where significant speed drops occur and their corresponding peaks
+    """
+    if len(speeds) < 3:
+        return [], []
+    
+    speeds_array = np.array(speeds)
+    
+    if debug:
+        print(f"Debug: Analyzing {len(speeds_array)} speed points")
+        print(f"Debug: Min drop ratio: {min_drop_ratio}, Min duration: {min_drop_duration}")
+    
+    # Step 1: Find all local peaks
+    peaks, peak_properties = find_peaks(speeds_array, distance=min_drop_duration, prominence=0.001)
+    
+    if debug:
+        print(f"Debug: Found {len(peaks)} potential peaks at indices: {peaks}")
+    
+    significant_drops = []
+    corresponding_peaks = []
+    
+    # Step 2: For each peak, find the very next local minimum
+    for peak_idx in peaks:
+        if peak_idx >= len(speeds_array) - 1:
+            if debug:
+                print(f"Debug: Skipping peak {peak_idx} (at or near end)")
+            continue
+        
+        peak_speed = speeds_array[peak_idx]
+        
+        # Find the next local minimum after this peak
+        # Look from peak+1 to the end of the array
+        search_start = peak_idx + 1
+        search_end = len(speeds_array)
+        
+        if search_start >= search_end:
+            if debug:
+                print(f"Debug: Skipping peak {peak_idx} (no data after peak)")
+            continue
+        
+        # Find local minima in the region after the peak
+        after_peak = speeds_array[search_start:search_end]
+        valleys_after, _ = find_peaks(-after_peak, prominence=0.001)
+        
+        if len(valleys_after) == 0:
+            if debug:
+                print(f"Debug: No valleys found after peak {peak_idx}")
+            continue
+        
+        # Take the first (closest) valley after the peak
+        first_valley_offset = valleys_after[0]
+        valley_idx = search_start + first_valley_offset
+        valley_speed = speeds_array[valley_idx]
+        
+        # Calculate duration (time steps between peak and valley)
+        duration = valley_idx - peak_idx
+        
+        # Calculate drop ratio
+        if peak_speed > 0:
+            drop_ratio = (peak_speed - valley_speed) / peak_speed
+        else:
+            drop_ratio = 0
+        
+        if debug:
+            print(f"Debug: Peak {peak_idx} -> Valley {valley_idx}: duration={duration}, ratio={drop_ratio:.3f}")
+        
+        # Check if this peak-valley pair meets our criteria
+        if duration >= min_drop_duration and drop_ratio >= min_drop_ratio:
+            significant_drops.append(valley_idx)
+            corresponding_peaks.append(peak_idx)
+            if debug:
+                print(f"Debug: VALID DROP: peak={peak_speed:.3f}, valley={valley_speed:.3f}, duration={duration}, ratio={drop_ratio:.3f}")
+        else:
+            if debug:
+                print(f"Debug: REJECTED DROP: duration={duration} (min={min_drop_duration}), ratio={drop_ratio:.3f} (min={min_drop_ratio})")
+    
+    if debug:
+        print(f"Debug: Final significant drops: {significant_drops}")
+        print(f"Debug: Corresponding peaks: {corresponding_peaks}")
+    
+    return significant_drops, corresponding_peaks
+
+
+def draw_speed_profile(speeds, save_path="speed_profile.png", title="Speed Profile", 
+                      show_connections=False, speed_drop_indices=None, speed_peak_indices=None,
+                      filter_type='none', filter_params=None):
     """Draws a speed profile plot from a list of speeds.
 
     Args:
         speeds (_type_): List or array of speed values (e.g., cursor speeds).
         save_path (str, optional): _description_. Defaults to "speed_profile.png".
         title (str, optional): _description_. Defaults to "Speed Profile".
+        show_connections (bool, optional): Whether to highlight speed drops. Defaults to False.
+        speed_drop_indices (list, optional): Indices of speed drops to highlight. Defaults to None.
+        filter_type (str, optional): Type of noise filtering to apply. Defaults to 'none'.
+        filter_params (dict, optional): Parameters for the filter. Defaults to None.
     """
+    # Filter out zero values to remove noise
+    speeds_array = np.array(speeds)
+    non_zero_mask = speeds_array > 0
+    filtered_speeds = speeds_array[non_zero_mask]
+    filtered_indices = np.where(non_zero_mask)[0]
+    
+    # Apply noise filtering if requested
+    if filter_type != 'none' and len(filtered_speeds) > 3:
+        filter_params = filter_params or {}
+        filtered_speeds = apply_noise_filtering(filtered_speeds, filter_type, **filter_params)
+    
     fig, ax = plt.subplots(figsize=(8, 4.5))
-    ax.plot(speeds, label="Speed", linewidth=1, color='black')
-    ax.scatter(range(len(speeds)), speeds, color='black', s=10, label="Time Steps", zorder=5)
+    
+    if len(filtered_speeds) > 0:
+        # Plot raw data if filtering is applied
+        if filter_type != 'none':
+            raw_speeds = speeds_array[non_zero_mask]
+            ax.plot(filtered_indices, raw_speeds, label="Raw Speed", linewidth=0.5, color='lightgray', alpha=0.7)
+            ax.plot(filtered_indices, filtered_speeds, label="Filtered Speed", linewidth=2, color='black')
+        else:
+            ax.plot(filtered_indices, filtered_speeds, label="Speed", linewidth=1, color='black')
+        
+        ax.scatter(filtered_indices, filtered_speeds, color='black', s=10, label="Time Steps", zorder=5)
+        
+        # Highlight speed drops if requested
+        if show_connections and speed_drop_indices is not None:
+            # Find which filtered indices correspond to speed drops
+            drop_indices_in_filtered = []
+            for drop_idx in speed_drop_indices:
+                if drop_idx in filtered_indices:
+                    drop_indices_in_filtered.append(np.where(filtered_indices == drop_idx)[0][0])
+            
+            if drop_indices_in_filtered:
+                drop_speeds = filtered_speeds[drop_indices_in_filtered]
+                drop_time_steps = filtered_indices[drop_indices_in_filtered]
+                ax.scatter(drop_time_steps, drop_speeds, color='blue', s=50, 
+                          label="Speed Drops", zorder=10, marker='X', alpha=0.6)
+                
+                # Add annotations for each speed drop
+                for i, (ts, sp) in enumerate(zip(drop_time_steps, drop_speeds)):
+                    ax.annotate(f'Drop {i+1}', (ts, sp), xytext=(5, 5), 
+                              textcoords='offset points', fontsize=8, color='blue')
+        
+        # Highlight speed peaks (start of slowdowns) if requested
+        if show_connections and speed_peak_indices is not None:
+            # Find which filtered indices correspond to speed peaks
+            peak_indices_in_filtered = []
+            for peak_idx in speed_peak_indices:
+                if peak_idx in filtered_indices:
+                    peak_indices_in_filtered.append(np.where(filtered_indices == peak_idx)[0][0])
+            
+            if peak_indices_in_filtered:
+                peak_speeds = filtered_speeds[peak_indices_in_filtered]
+                peak_time_steps = filtered_indices[peak_indices_in_filtered]
+                ax.scatter(peak_time_steps, peak_speeds, color='red', s=50, 
+                          label="Speed Peaks", zorder=10, marker='X', alpha=0.6)
+                
+                # Add annotations for each speed peak
+                for i, (ts, sp) in enumerate(zip(peak_time_steps, peak_speeds)):
+                    ax.annotate(f'Peak {i+1}', (ts, sp), xytext=(5, -15), 
+                              textcoords='offset points', fontsize=8, color='red')
+    else:
+        # If all speeds are zero, plot empty data
+        ax.plot([], [], label="Speed", linewidth=1, color='black')
+        ax.scatter([], [], color='black', s=10, label="Time Steps", zorder=5)
+    
     ax.set_title(title)
     ax.set_xlabel("Time Step")
     ax.set_ylabel("Speed (m/s)")
-    ax.legend()
+    ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
     ax.grid(True)
     plt.tight_layout()
-    plt.savefig(save_path, dpi=300)
+    plt.savefig(save_path, dpi=300, bbox_inches='tight')
     plt.close()
     print(f"Speed profile saved to {save_path}")
     
@@ -40,7 +299,8 @@ def draw_speed_profile(speeds, save_path="speed_profile.png", title="Speed Profi
 def draw_trajectory(cursor_x, cursor_y, target_pos, radius,
                     window_width, window_height,
                     tunnel_path=None, tunnel_width=None, segment_widths=None, 
-                    pause_coordinates=None, save_path="trajectory.png", title="Cursor Trajectory"):
+                    pause_coordinates=None, save_path="trajectory.png", title="Cursor Trajectory",
+                    show_connections=False, speed_drop_indices=None, speed_peak_indices=None):
     """
     Draws the cursor trajectory, target, and tunnel boundaries.
 
@@ -53,8 +313,11 @@ def draw_trajectory(cursor_x, cursor_y, target_pos, radius,
         window_height (float): Height of the environment (m).
         tunnel_path (list of (x, y)): Center points of the tunnel path.
         tunnel_width (float): Width of the tunnel (same units as positions).
+        pause_coordinates (list): Coordinates where pauses occurred.
         save_path (str): Path to save image file.
         title (str): Title of the plot.
+        show_connections (bool, optional): Whether to highlight speed drop positions. Defaults to False.
+        speed_drop_indices (list, optional): Indices of speed drops to highlight. Defaults to None.
     """
     cursor_x = np.array(cursor_x)
     cursor_y = np.array(cursor_y)
@@ -66,6 +329,32 @@ def draw_trajectory(cursor_x, cursor_y, target_pos, radius,
     ax.plot(cursor_x, cursor_y, label="Cursor Trajectory", linewidth=0.5, color='black')
     ax.scatter(cursor_x[0], cursor_y[0], color='green', label="Start", zorder=5)
     ax.scatter(cursor_x[-1], cursor_y[-1], color='blue', label="End", zorder=5)
+    
+    # Highlight speed drop positions if requested
+    if show_connections and speed_drop_indices is not None:
+        for i, drop_idx in enumerate(speed_drop_indices):
+            if 0 <= drop_idx < len(cursor_x):
+                ax.scatter(cursor_x[drop_idx], cursor_y[drop_idx], 
+                          color='blue', s=100, marker='X', zorder=10, 
+                          alpha=0.6, label="Speed Drop" if i == 0 else "")
+                # Add annotation
+                ax.annotate(f'Drop {i+1}', (cursor_x[drop_idx], cursor_y[drop_idx]), 
+                          xytext=(10, 10), textcoords='offset points', 
+                          fontsize=8, color='blue', bbox=dict(boxstyle="round,pad=0.3", 
+                          facecolor='white', alpha=0.7))
+    
+    # Highlight speed peak positions (start of slowdowns) if requested
+    if show_connections and speed_peak_indices is not None:
+        for i, peak_idx in enumerate(speed_peak_indices):
+            if 0 <= peak_idx < len(cursor_x):
+                ax.scatter(cursor_x[peak_idx], cursor_y[peak_idx], 
+                          color='red', s=100, marker='X', zorder=10, 
+                          alpha=0.6, label="Speed Peak" if i == 0 else "")
+                # Add annotation
+                ax.annotate(f'Peak {i+1}', (cursor_x[peak_idx], cursor_y[peak_idx]), 
+                          xytext=(10, -15), textcoords='offset points', 
+                          fontsize=8, color='red', bbox=dict(boxstyle="round,pad=0.3", 
+                          facecolor='white', alpha=0.7))
 
     # Draw target
     target_circle = plt.Circle((target_x, target_y), radius, color='red', alpha=0.5, label="Target")
@@ -143,11 +432,12 @@ def draw_trajectory(cursor_x, cursor_y, target_pos, radius,
     ax.set_title(title)
     ax.set_xlabel("X position (m)")
     ax.set_ylabel("Y position (m)")
-    ax.legend()
+    ax.invert_yaxis()  # Flip the trajectory plot upside down
+    ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
     ax.grid(False)
 
     plt.tight_layout()
-    plt.savefig(save_path, dpi=300)
+    plt.savefig(save_path, dpi=300, bbox_inches='tight')
     plt.close()
     print(f"Trajectory saved to {save_path}")
 
@@ -249,12 +539,19 @@ def extract_excursion_positions(excursions):
     return positions
 
 
-def analyze_json_data(json_file_path, participant_output_dir):
+def analyze_json_data(json_file_path, participant_output_dir, show_connections=False,
+                     drop_ratio=0.3, drop_duration=3, filter_type='none', 
+                     filter_params=None, debug_drops=False):
     """Analyze JSON data from React steering experiment and generate plots.
     
     Args:
         json_file_path (str): Path to JSON data file
         participant_output_dir (str): Directory to save plots for this participant
+        show_connections (bool): Whether to show speed drop connections
+        drop_ratio (float): Minimum speed drop ratio for detection
+        drop_duration (int): Minimum speed drop duration
+        filter_type (str): Type of noise filtering to apply
+        filter_params (dict): Parameters for the filter
     """
     # Load JSON data
     with open(json_file_path, 'r') as f:
@@ -343,6 +640,30 @@ def analyze_json_data(json_file_path, participant_output_dir):
         trajectory_file = participant_output_dir / f"trajectory_{trial_prefix}.png"
         speed_file = participant_output_dir / f"speed_{trial_prefix}.png"
         
+        # Detect speed drops if connections are enabled
+        speed_drop_indices = []
+        speed_peak_indices = []
+        if show_connections and speeds:
+            # Filter out zero speeds for consistent drop detection
+            speeds_array = np.array(speeds)
+            non_zero_mask = speeds_array > 0
+            filtered_speeds = speeds_array[non_zero_mask]
+            filtered_indices = np.where(non_zero_mask)[0]
+            
+            if len(filtered_speeds) > 0:
+                # Apply noise filtering if requested
+                if filter_type != 'none' and len(filtered_speeds) > 3:
+                    filter_params = filter_params or {}
+                    noise_reduced_speeds = apply_noise_filtering(filtered_speeds, filter_type, **filter_params)
+                else:
+                    noise_reduced_speeds = filtered_speeds
+                
+                # Detect drops and peaks on noise-reduced data
+                filtered_drop_indices, filtered_peak_indices = detect_speed_drops(noise_reduced_speeds, drop_ratio, drop_duration, debug_drops)
+                # Convert back to original indices
+                speed_drop_indices = [filtered_indices[i] for i in filtered_drop_indices]
+                speed_peak_indices = [filtered_indices[i] for i in filtered_peak_indices]
+        
         # Create trajectory plot
         trajectory_title = f"Trial {trial_id}: {condition.get('description', 'Unknown condition')}"
         draw_trajectory(
@@ -357,7 +678,10 @@ def analyze_json_data(json_file_path, participant_output_dir):
             segment_widths=segment_widths,
             pause_coordinates=excursion_positions,
             save_path=str(trajectory_file),
-            title=trajectory_title
+            title=trajectory_title,
+            show_connections=show_connections,
+            speed_drop_indices=speed_drop_indices,
+            speed_peak_indices=speed_peak_indices
         )
         
         # Create speed profile plot
@@ -366,7 +690,12 @@ def analyze_json_data(json_file_path, participant_output_dir):
             draw_speed_profile(
                 speeds=speeds,
                 save_path=str(speed_file),
-                title=speed_title
+                title=speed_title,
+                show_connections=show_connections,
+                speed_drop_indices=speed_drop_indices,
+                speed_peak_indices=speed_peak_indices,
+                filter_type=filter_type,
+                filter_params=filter_params
             )
         
         # Print trial summary
@@ -473,12 +802,19 @@ def generate_summary_stats(trial_data_list, participant_output_dir, participant_
     print(f"Summary statistics saved to: {summary_file}")
 
 
-def process_participant_data(input_dir, output_dir):
+def process_participant_data(input_dir, output_dir, show_connections=False, 
+                           drop_ratio=0.3, drop_duration=3, filter_type='none', 
+                           filter_params=None, debug_drops=False):
     """Process all participant data files in the input directory.
     
     Args:
         input_dir (str): Directory containing participant JSON files
         output_dir (str): Directory to store analysis results
+        show_connections (bool): Whether to show speed drop connections
+        drop_ratio (float): Minimum speed drop ratio for detection
+        drop_duration (int): Minimum speed drop duration
+        filter_type (str): Type of noise filtering to apply
+        filter_params (dict): Parameters for the filter
     """
     input_path = Path(input_dir)
     output_path = Path(output_dir)
@@ -516,7 +852,9 @@ def process_participant_data(input_dir, output_dir):
             print(f"Participant ID: {participant_id}")
             
             # Analyze this participant's data
-            analyze_json_data(json_file, participant_output_dir)
+            analyze_json_data(json_file, participant_output_dir, 
+                            show_connections, drop_ratio, drop_duration,
+                            filter_type, filter_params, debug_drops)
             
         except Exception as e:
             print(f"Error processing {json_file.name}: {e}")
@@ -532,11 +870,31 @@ def main():
     parser = argparse.ArgumentParser(description='Analyze React steering experiment data for multiple participants')
     parser.add_argument('input_dir', help='Directory containing participant JSON data files')
     parser.add_argument('output_dir', help='Directory to store analysis results')
+    parser.add_argument('--show-connections', action='store_true', 
+                       help='Show connections between speed drops and trajectory positions')
+    parser.add_argument('--drop-ratio', type=float, default=0.3,
+                       help='Minimum speed drop ratio to be considered significant (0-1, default: 0.3)')
+    parser.add_argument('--drop-duration', type=int, default=3,
+                       help='Minimum duration of speed drop in time steps (default: 3)')
+    parser.add_argument('--filter-type', type=str, default='none',
+                       choices=['none', 'savgol', 'gaussian', 'butterworth', 'moving_average', 'median', 'adaptive'],
+                       help='Type of noise filtering to apply (default: none)')
+    parser.add_argument('--filter-params', type=str, default='',
+                       help='Filter parameters as key=value pairs separated by commas (e.g., "window_length=15,sigma=2.0")')
+    parser.add_argument('--debug-drops', action='store_true',
+                       help='Enable debug output for speed drop detection')
     
     args = parser.parse_args()
     
     try:
-        process_participant_data(args.input_dir, args.output_dir)
+        filter_params = parse_filter_params(args.filter_params)
+        process_participant_data(args.input_dir, args.output_dir, 
+                               show_connections=args.show_connections,
+                               drop_ratio=args.drop_ratio,
+                               drop_duration=args.drop_duration,
+                               filter_type=args.filter_type,
+                               filter_params=filter_params,
+                               debug_drops=args.debug_drops)
     except Exception as e:
         print(f"Error processing data: {e}")
         raise
