@@ -64,6 +64,7 @@ const HumanSteeringExperiment = () => {
 
   // Environment state
   const [cursorPos, setCursorPos] = useState({ x: 0, y: 0 });
+  const cursorPosRef = useRef({ x: 0, y: 0 }); // For immediate rendering without React state delay
   const [cursorVel, setCursorVel] = useState({ x: 0, y: 0 });
   const [tunnelPath, setTunnelPath] = useState([]);
   const [tunnelWidth, setTunnelWidth] = useState(0.015);
@@ -133,6 +134,7 @@ const HumanSteeringExperiment = () => {
     setStartButtonPos(startPos);
     setTargetPos(endPos);
     setCursorPos(startPos);
+    cursorPosRef.current = startPos; // Update ref immediately
     setCursorVel({ x: 0, y: 0 });
     
     setTrialState(TrialState.WAITING_FOR_START);
@@ -159,6 +161,7 @@ const HumanSteeringExperiment = () => {
     
     const startPos = { x: startButtonPos.x, y: startButtonPos.y };
     setCursorPos(startPos);
+    cursorPosRef.current = startPos; // Update ref immediately
     setCursorVel({ x: 0, y: 0 });
     
     setTrajectoryPoints([startPos]);
@@ -256,6 +259,7 @@ const HumanSteeringExperiment = () => {
     trialState,
     setTrialState,
     setCursorPos,
+    cursorPosRef,
     setCursorVel,
     setTrajectoryPoints,
     setSpeedHistory,
@@ -286,6 +290,9 @@ const HumanSteeringExperiment = () => {
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
       
+      // Use ref for immediate cursor position (no React state delay)
+      const currentCursorPos = cursorPosRef.current;
+      
       drawCanvas(
         ctx,
         tunnelPath,
@@ -294,7 +301,7 @@ const HumanSteeringExperiment = () => {
         segmentWidths,
         excursionMarkers,
         shouldMarkBoundaries(),
-        cursorPos,
+        currentCursorPos,
         trialState,
         startButtonPos,
         targetPos,

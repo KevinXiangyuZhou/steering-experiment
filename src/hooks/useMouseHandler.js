@@ -8,6 +8,7 @@ export const useMouseHandler = ({
   trialState,
   setTrialState,
   setCursorPos,
+  cursorPosRef, // Ref for immediate position updates
   setCursorVel,
   setTrajectoryPoints,
   setSpeedHistory,
@@ -88,7 +89,9 @@ export const useMouseHandler = ({
       }
     }
     
-    // Update cursor position and velocity
+    // Update cursor position immediately via ref (for smooth rendering)
+    cursorPosRef.current = { x, y };
+    // Also update state (for data recording and React dependencies)
     setCursorPos({ x, y });
     setCursorVel(velocity);
     
@@ -142,6 +145,7 @@ export const useMouseHandler = ({
     phase,
     trialState,
     setCursorPos,
+    cursorPosRef,
     setCursorVel,
     setTrajectoryPoints,
     setSpeedHistory,
