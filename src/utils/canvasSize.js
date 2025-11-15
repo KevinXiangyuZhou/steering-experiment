@@ -51,10 +51,12 @@ export const calculateCanvasDimensions = () => {
   const normalizedWidth = 0.46;
   const normalizedHeight = 0.26;
   
+  const scale = canvasWidth / normalizedWidth;
+  
   return {
     width: Math.round(canvasWidth),
     height: Math.round(canvasHeight),
-    scale: canvasWidth / normalizedWidth // Scale to convert normalized coords to pixels
+    scale: scale // Scale to convert normalized coords to pixels
   };
 };
 

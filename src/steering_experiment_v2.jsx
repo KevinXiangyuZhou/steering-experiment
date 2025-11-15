@@ -28,7 +28,14 @@ const HumanSteeringExperiment = () => {
   const animationRef = useRef(null);
   
   // Canvas dimensions (calculated based on physical size)
-  const [canvasDimensions, setCanvasDimensions] = useState(() => calculateCanvasDimensions());
+  const [canvasDimensions, setCanvasDimensions] = useState(() => {
+    // Only calculate if window is available (client-side)
+    if (typeof window !== 'undefined') {
+      return calculateCanvasDimensions();
+    }
+    // Default fallback values
+    return { width: 460, height: 260, scale: 1000 };
+  });
   
   // Experiment state
   const [phase, setPhase] = useState(ExperimentPhase.WELCOME);
@@ -267,16 +274,18 @@ const HumanSteeringExperiment = () => {
     setHasExcursionMarker,
     onTrialComplete: completeTrial,
     onStartTrial: startTrialMovement,
-    scale: canvasDimensions.scale
+    scale: canvasDimensions?.scale || 1000
   });
 
   // Animation loop
   useEffect(() => {
     const animate = () => {
       const canvas = canvasRef.current;
-      if (!canvas) return;
+      if (!canvas || !canvasDimensions || !canvasDimensions.width || !canvasDimensions.height || !canvasDimensions.scale) return;
       
       const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      
       drawCanvas(
         ctx,
         tunnelPath,

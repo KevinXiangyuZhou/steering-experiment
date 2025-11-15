@@ -60,11 +60,11 @@ export const TrialCanvas = ({
         
         <canvas
           ref={canvasRef}
-          width={canvasWidth}
-          height={canvasHeight}
+          width={canvasWidth || 460}
+          height={canvasHeight || 260}
           style={{
-            width: `${canvasWidth}px`,
-            height: `${canvasHeight}px`
+            width: `${canvasWidth || 460}px`,
+            height: `${canvasHeight || 260}px`
           }}
           onClick={onMouseClick}
           onMouseMove={onMouseMove}

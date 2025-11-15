@@ -68,8 +68,8 @@ export const drawTunnel = (ctx, tunnelPath, tunnelType, tunnelWidth, segmentWidt
     
     ctx.beginPath();
     tunnelPath.forEach((point, i) => {
-      const x = point.x * SCALE;
-      const upperY = (point.y - halfWidth) * SCALE;
+      const x = point.x * scale;
+      const upperY = (point.y - halfWidth) * scale;
       if (i === 0) ctx.moveTo(x, upperY);
       else ctx.lineTo(x, upperY);
     });
@@ -77,8 +77,8 @@ export const drawTunnel = (ctx, tunnelPath, tunnelType, tunnelWidth, segmentWidt
     
     ctx.beginPath();
     tunnelPath.forEach((point, i) => {
-      const x = point.x * SCALE;
-      const lowerY = (point.y + halfWidth) * SCALE;
+      const x = point.x * scale;
+      const lowerY = (point.y + halfWidth) * scale;
       if (i === 0) ctx.moveTo(x, lowerY);
       else ctx.lineTo(x, lowerY);
     });
