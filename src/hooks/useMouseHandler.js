@@ -1,5 +1,5 @@
 import { useRef, useCallback } from 'react';
-import { TrialState, START_BUTTON_RADIUS, TARGET_RADIUS, SCALE } from '../constants/experimentConstants.js';
+import { TrialState, START_BUTTON_RADIUS, TARGET_RADIUS } from '../constants/experimentConstants.js';
 import { ExperimentPhase } from '../constants/experimentConstants.js';
 import { checkTunnelExcursions } from '../utils/excursionChecker.js';
 
@@ -25,7 +25,8 @@ export const useMouseHandler = ({
   hasExcursionMarker,
   setHasExcursionMarker,
   onTrialComplete,
-  onStartTrial
+  onStartTrial,
+  scale
 }) => {
   const lastTimeRef = useRef(0);
   const lastMousePosRef = useRef(null);
@@ -46,8 +47,8 @@ export const useMouseHandler = ({
     if (trialState !== TrialState.WAITING_FOR_START) return;
     
     const rect = event.currentTarget.getBoundingClientRect();
-    const x = (event.clientX - rect.left) / SCALE;
-    const y = (event.clientY - rect.top) / SCALE;
+    const x = (event.clientX - rect.left) / scale;
+    const y = (event.clientY - rect.top) / scale;
     
     const distance = Math.sqrt((x - startButtonPos.x) ** 2 + (y - startButtonPos.y) ** 2);
     
@@ -71,8 +72,8 @@ export const useMouseHandler = ({
     if (trialState !== TrialState.IN_PROGRESS) return;
     
     const rect = event.currentTarget.getBoundingClientRect();
-    const x = (event.clientX - rect.left) / SCALE;
-    const y = (event.clientY - rect.top) / SCALE;
+    const x = (event.clientX - rect.left) / scale;
+    const y = (event.clientY - rect.top) / scale;
     
     const currentTime = Date.now();
     
@@ -158,7 +159,8 @@ export const useMouseHandler = ({
     hasExcursionMarker,
     setHasExcursionMarker,
     setTrialState,
-    onTrialComplete
+    onTrialComplete,
+    scale
   ]);
 
   return { handleMouseClick, handleMouseMove, lastTimeRef };

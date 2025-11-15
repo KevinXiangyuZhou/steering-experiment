@@ -21,10 +21,14 @@ import {
   getTimedTrialNumber, 
   getTimedTotalTrials 
 } from './utils/trialManager.js';
+import { calculateCanvasDimensions } from './utils/canvasSize.js';
 
 const HumanSteeringExperiment = () => {
   const canvasRef = useRef(null);
   const animationRef = useRef(null);
+  
+  // Canvas dimensions (calculated based on physical size)
+  const [canvasDimensions, setCanvasDimensions] = useState(() => calculateCanvasDimensions());
   
   // Experiment state
   const [phase, setPhase] = useState(ExperimentPhase.WELCOME);
@@ -76,6 +80,17 @@ const HumanSteeringExperiment = () => {
   const shouldMarkBoundaries = useCallback(() => {
     return phase === ExperimentPhase.PRACTICE || phase === ExperimentPhase.MAIN_TRIALS || phase === ExperimentPhase.SEQUENTIAL_TRIALS;
   }, [phase]);
+
+  // Calculate canvas dimensions on mount and window resize
+  useEffect(() => {
+    const updateCanvasDimensions = () => {
+      setCanvasDimensions(calculateCanvasDimensions());
+    };
+    
+    updateCanvasDimensions();
+    window.addEventListener('resize', updateCanvasDimensions);
+    return () => window.removeEventListener('resize', updateCanvasDimensions);
+  }, []);
 
   // Extract URL parameters on component mount
   useEffect(() => {
@@ -251,7 +266,8 @@ const HumanSteeringExperiment = () => {
     hasExcursionMarker,
     setHasExcursionMarker,
     onTrialComplete: completeTrial,
-    onStartTrial: startTrialMovement
+    onStartTrial: startTrialMovement,
+    scale: canvasDimensions.scale
   });
 
   // Animation loop
@@ -272,7 +288,10 @@ const HumanSteeringExperiment = () => {
         cursorPos,
         trialState,
         startButtonPos,
-        targetPos
+        targetPos,
+        canvasDimensions.width,
+        canvasDimensions.height,
+        canvasDimensions.scale
       );
       animationRef.current = requestAnimationFrame(animate);
     };
@@ -283,7 +302,7 @@ const HumanSteeringExperiment = () => {
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [cursorPos, trialState, tunnelPath, startButtonPos, targetPos, tunnelWidth, excursionMarkers, shouldMarkBoundaries, hasExcursionMarker, tunnelType, segmentWidths]);
+  }, [cursorPos, trialState, tunnelPath, startButtonPos, targetPos, tunnelWidth, excursionMarkers, shouldMarkBoundaries, hasExcursionMarker, tunnelType, segmentWidths, canvasDimensions]);
 
   const handleUploadData = async () => {
     setUploadStatus('uploading');
@@ -424,6 +443,8 @@ const HumanSteeringExperiment = () => {
             onMouseMove={handleMouseMove}
             renderStatus={renderStatus}
             renderControls={renderControls}
+            canvasWidth={canvasDimensions.width}
+            canvasHeight={canvasDimensions.height}
           />
         );
     }

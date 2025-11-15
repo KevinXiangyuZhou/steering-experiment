@@ -1,5 +1,5 @@
 import React from 'react';
-import { CANVAS_WIDTH, CANVAS_HEIGHT, TrialState, ExperimentPhase } from '../../constants/experimentConstants.js';
+import { TrialState, ExperimentPhase } from '../../constants/experimentConstants.js';
 
 export const TrialCanvas = ({
   canvasRef,
@@ -12,7 +12,9 @@ export const TrialCanvas = ({
   onMouseClick,
   onMouseMove,
   renderStatus,
-  renderControls
+  renderControls,
+  canvasWidth,
+  canvasHeight
 }) => {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4">
@@ -58,8 +60,12 @@ export const TrialCanvas = ({
         
         <canvas
           ref={canvasRef}
-          width={CANVAS_WIDTH}
-          height={CANVAS_HEIGHT}
+          width={canvasWidth}
+          height={canvasHeight}
+          style={{
+            width: `${canvasWidth}px`,
+            height: `${canvasHeight}px`
+          }}
           onClick={onMouseClick}
           onMouseMove={onMouseMove}
           className="border border-gray-300 cursor-crosshair"

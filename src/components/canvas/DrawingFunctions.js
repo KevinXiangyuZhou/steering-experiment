@@ -1,12 +1,9 @@
 import { 
-  CANVAS_WIDTH, 
-  CANVAS_HEIGHT, 
-  SCALE, 
   START_BUTTON_RADIUS, 
   TARGET_RADIUS 
 } from '../../constants/experimentConstants.js';
 
-export const drawTunnel = (ctx, tunnelPath, tunnelType, tunnelWidth, segmentWidths) => {
+export const drawTunnel = (ctx, tunnelPath, tunnelType, tunnelWidth, segmentWidths, scale) => {
   ctx.strokeStyle = '#666666';
   ctx.lineWidth = 2;
   
@@ -23,8 +20,8 @@ export const drawTunnel = (ctx, tunnelPath, tunnelType, tunnelWidth, segmentWidt
       ctx.beginPath();
       for (let i = startIndex; i < endIndex && i < tunnelPath.length; i++) {
         const point = tunnelPath[i];
-        const x = point.x * SCALE;
-        const upperY = (point.y - halfWidth) * SCALE;
+        const x = point.x * scale;
+        const upperY = (point.y - halfWidth) * scale;
         if (i === startIndex) ctx.moveTo(x, upperY);
         else ctx.lineTo(x, upperY);
       }
@@ -34,8 +31,8 @@ export const drawTunnel = (ctx, tunnelPath, tunnelType, tunnelWidth, segmentWidt
       ctx.beginPath();
       for (let i = startIndex; i < endIndex && i < tunnelPath.length; i++) {
         const point = tunnelPath[i];
-        const x = point.x * SCALE;
-        const lowerY = (point.y + halfWidth) * SCALE;
+        const x = point.x * scale;
+        const lowerY = (point.y + halfWidth) * scale;
         if (i === startIndex) ctx.moveTo(x, lowerY);
         else ctx.lineTo(x, lowerY);
       }
@@ -49,20 +46,20 @@ export const drawTunnel = (ctx, tunnelPath, tunnelType, tunnelWidth, segmentWidt
     const transitionIndex = Math.floor(segmentLength);
     if (transitionIndex < tunnelPath.length) {
       const transitionPoint = tunnelPath[transitionIndex];
-      const x = transitionPoint.x * SCALE;
+      const x = transitionPoint.x * scale;
       const prevHalfWidth = segmentWidths[0] / 2;
       const currHalfWidth = segmentWidths[1] / 2;
       
       // Draw vertical line connecting upper boundaries
       ctx.beginPath();
-      ctx.moveTo(x, (transitionPoint.y - prevHalfWidth) * SCALE);
-      ctx.lineTo(x, (transitionPoint.y - currHalfWidth) * SCALE);
+      ctx.moveTo(x, (transitionPoint.y - prevHalfWidth) * scale);
+      ctx.lineTo(x, (transitionPoint.y - currHalfWidth) * scale);
       ctx.stroke();
       
       // Draw vertical line connecting lower boundaries
       ctx.beginPath();
-      ctx.moveTo(x, (transitionPoint.y + prevHalfWidth) * SCALE);
-      ctx.lineTo(x, (transitionPoint.y + currHalfWidth) * SCALE);
+      ctx.moveTo(x, (transitionPoint.y + prevHalfWidth) * scale);
+      ctx.lineTo(x, (transitionPoint.y + currHalfWidth) * scale);
       ctx.stroke();
     }
   } else {
@@ -89,15 +86,15 @@ export const drawTunnel = (ctx, tunnelPath, tunnelType, tunnelWidth, segmentWidt
   }
 };
 
-export const drawExcursionMarkers = (ctx, excursionMarkers) => {
+export const drawExcursionMarkers = (ctx, excursionMarkers, scale) => {
   excursionMarkers.forEach(marker => {
     ctx.fillStyle = '#FF6B6B';
     ctx.strokeStyle = '#DC2626';
     ctx.lineWidth = 2;
     
     // Draw a small X mark at the excursion boundary point
-    const x = marker.x * SCALE;
-    const y = marker.y * SCALE;
+    const x = marker.x * scale;
+    const y = marker.y * scale;
     const size = 4;
     
     ctx.beginPath();
@@ -114,17 +111,17 @@ export const drawExcursionMarkers = (ctx, excursionMarkers) => {
   });
 };
 
-export const drawCursor = (ctx, cursorPos) => {
+export const drawCursor = (ctx, cursorPos, scale) => {
   ctx.fillStyle = '#0000FF';
   ctx.beginPath();
-  ctx.arc(cursorPos.x * SCALE, cursorPos.y * SCALE, 3, 0, 2 * Math.PI);
+  ctx.arc(cursorPos.x * scale, cursorPos.y * scale, 3, 0, 2 * Math.PI);
   ctx.fill();
 };
 
-export const drawStartButton = (ctx, startButtonPos) => {
-  const x = startButtonPos.x * SCALE;
-  const y = startButtonPos.y * SCALE;
-  const radius = START_BUTTON_RADIUS * SCALE;
+export const drawStartButton = (ctx, startButtonPos, scale) => {
+  const x = startButtonPos.x * scale;
+  const y = startButtonPos.y * scale;
+  const radius = START_BUTTON_RADIUS * scale;
   
   ctx.fillStyle = '#00FF00';
   ctx.beginPath();
@@ -140,10 +137,10 @@ export const drawStartButton = (ctx, startButtonPos) => {
   ctx.textAlign = 'center';
 };
 
-export const drawTarget = (ctx, targetPos) => {
-  const x = targetPos.x * SCALE;
-  const y = targetPos.y * SCALE;
-  const radius = TARGET_RADIUS * SCALE;
+export const drawTarget = (ctx, targetPos, scale) => {
+  const x = targetPos.x * scale;
+  const y = targetPos.y * scale;
+  const radius = TARGET_RADIUS * scale;
   
   ctx.fillStyle = '#FF0000';
   ctx.beginPath();
@@ -166,29 +163,32 @@ export const drawCanvas = (
   cursorPos,
   trialState,
   startButtonPos,
-  targetPos
+  targetPos,
+  canvasWidth,
+  canvasHeight,
+  scale
 ) => {
-  ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+  ctx.clearRect(0, 0, canvasWidth, canvasHeight);
   
   // Draw tunnel
   if (tunnelPath.length > 0) {
-    drawTunnel(ctx, tunnelPath, tunnelType, tunnelWidth, segmentWidths);
+    drawTunnel(ctx, tunnelPath, tunnelType, tunnelWidth, segmentWidths, scale);
   }
   
   // Draw excursion markers (in phases where boundaries are marked)
   if (shouldMarkBoundaries && excursionMarkers.length > 0) {
-    drawExcursionMarkers(ctx, excursionMarkers);
+    drawExcursionMarkers(ctx, excursionMarkers, scale);
   }
   
   // Draw cursor
-  drawCursor(ctx, cursorPos);
+  drawCursor(ctx, cursorPos, scale);
   
   // Draw start button
   if (trialState === 'waiting_for_start') {
-    drawStartButton(ctx, startButtonPos);
+    drawStartButton(ctx, startButtonPos, scale);
   }
   
   // Draw target
-  drawTarget(ctx, targetPos);
+  drawTarget(ctx, targetPos, scale);
 };
 
