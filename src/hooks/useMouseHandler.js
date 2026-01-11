@@ -8,11 +8,8 @@ export const useMouseHandler = ({
   trialState,
   setTrialState,
   setCursorPos,
-  cursorPosRef, // Ref for immediate position updates
+  cursorPosRef, // Ref for immediate position updates (recording done via time-based sampling)
   setCursorVel,
-  setTrajectoryPoints,
-  setSpeedHistory,
-  setTimestampHistory,
   startButtonPos,
   targetPos,
   tunnelPath,
@@ -31,7 +28,6 @@ export const useMouseHandler = ({
 }) => {
   const lastTimeRef = useRef(0);
   const lastMousePosRef = useRef(null);
-  const trajectoryLengthRef = useRef(0);
 
   const handleMouseClick = useCallback((event) => {
     if (![
@@ -91,19 +87,11 @@ export const useMouseHandler = ({
     
     // Update cursor position immediately via ref (for smooth rendering)
     cursorPosRef.current = { x, y };
-    // Also update state (for data recording and React dependencies)
+    // Also update state (for React dependencies)
     setCursorPos({ x, y });
     setCursorVel(velocity);
     
-    // Record data immediately when position updates
-    const speed = Math.sqrt(velocity.x ** 2 + velocity.y ** 2);
-    setTrajectoryPoints(prev => {
-      const newPoints = [...prev, { x, y }];
-      trajectoryLengthRef.current = newPoints.length;
-      return newPoints;
-    });
-    setSpeedHistory(prev => [...prev, speed]);
-    setTimestampHistory(prev => [...prev, currentTime]);
+    // Note: Position recording is now done via time-based sampling (not on every mouse move)
     
     // Check for excursions and mark them
     if (shouldMarkBoundaries()) {
@@ -114,8 +102,8 @@ export const useMouseHandler = ({
         setHasExcursionMarker(true);
         
         // Record excursion event
+        // Note: timeIndex will be calculated based on elapsed time since sampling is time-based
         const excursion = {
-          timeIndex: trajectoryLengthRef.current - 1,
           position: { x, y },
           distanceOutside: excursionResult.distanceOutside,
           timestamp: currentTime,
@@ -147,9 +135,6 @@ export const useMouseHandler = ({
     setCursorPos,
     cursorPosRef,
     setCursorVel,
-    setTrajectoryPoints,
-    setSpeedHistory,
-    setTimestampHistory,
     startButtonPos,
     targetPos,
     tunnelPath,

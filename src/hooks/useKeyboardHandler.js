@@ -35,12 +35,6 @@ export const useKeyboardHandler = ({
 
         case ExperimentPhase.ENVIRONMENT_SETUP:
           if (event.key === ' ') {
-            setPhase(ExperimentPhase.SCREEN_CALIBRATION);
-          }
-          break;
-
-        case ExperimentPhase.SCREEN_CALIBRATION:
-          if (event.key === ' ') {
             setPhase(ExperimentPhase.INSTRUCTIONS);
           }
           break;

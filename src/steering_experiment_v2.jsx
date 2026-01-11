@@ -10,7 +10,6 @@ import { useMouseHandler } from './hooks/useMouseHandler.js';
 import { useTrialTimer } from './hooks/useTrialTimer.js';
 import { WelcomeScreen } from './components/ui/WelcomeScreen.jsx';
 import { EnvironmentSetup } from './components/ui/EnvironmentSetup.jsx';
-import { ScreenCalibration } from './components/ui/ScreenCalibration.jsx';
 import { Instructions } from './components/ui/Instructions.jsx';
 import { TimeConstraintIntro } from './components/ui/TimeConstraintIntro.jsx';
 import { CompleteScreen } from './components/ui/CompleteScreen.jsx';
@@ -65,6 +64,8 @@ const HumanSteeringExperiment = () => {
   // Environment state
   const [cursorPos, setCursorPos] = useState({ x: 0, y: 0 });
   const cursorPosRef = useRef({ x: 0, y: 0 }); // For immediate rendering without React state delay
+  const lastSampledPosRef = useRef({ x: 0, y: 0 }); // For speed calculation in sampling
+  const lastSampledTimeRef = useRef(0); // For speed calculation in sampling
   const [cursorVel, setCursorVel] = useState({ x: 0, y: 0 });
   const [tunnelPath, setTunnelPath] = useState([]);
   const [tunnelWidth, setTunnelWidth] = useState(0.015);
@@ -164,10 +165,15 @@ const HumanSteeringExperiment = () => {
     cursorPosRef.current = startPos; // Update ref immediately
     setCursorVel({ x: 0, y: 0 });
     
+    // Initialize trajectory with start position
     setTrajectoryPoints([startPos]);
     setSpeedHistory([0]);
     setTimestampHistory([startTime]);
     setExcursionEvents([]);
+    
+    // Initialize sampling refs
+    lastSampledPosRef.current = startPos;
+    lastSampledTimeRef.current = startTime;
   };
 
   const completeTrial = (success) => {
@@ -261,9 +267,6 @@ const HumanSteeringExperiment = () => {
     setCursorPos,
     cursorPosRef,
     setCursorVel,
-    setTrajectoryPoints,
-    setSpeedHistory,
-    setTimestampHistory,
     startButtonPos,
     targetPos,
     tunnelPath,
@@ -280,6 +283,38 @@ const HumanSteeringExperiment = () => {
     onStartTrial: startTrialMovement,
     scale: canvasDimensions?.scale || 1000
   });
+
+  // Time-based sampling of cursor position (every 0.01s = 100Hz)
+  useEffect(() => {
+    if (trialState !== TrialState.IN_PROGRESS) return;
+    
+    const sampleInterval = setInterval(() => {
+      const currentPos = cursorPosRef.current;
+      const currentTime = Date.now();
+      
+      // Calculate speed from previous sampled position
+      let speed = 0;
+      if (lastSampledTimeRef.current > 0) {
+        const dx = currentPos.x - lastSampledPosRef.current.x;
+        const dy = currentPos.y - lastSampledPosRef.current.y;
+        const dt = (currentTime - lastSampledTimeRef.current) / 1000;
+        if (dt > 0) {
+          speed = Math.sqrt((dx / dt) ** 2 + (dy / dt) ** 2);
+        }
+      }
+      
+      // Record position, speed, and timestamp
+      setTrajectoryPoints(prev => [...prev, { x: currentPos.x, y: currentPos.y }]);
+      setSpeedHistory(prev => [...prev, speed]);
+      setTimestampHistory(prev => [...prev, currentTime]);
+      
+      // Update refs for next speed calculation
+      lastSampledPosRef.current = { x: currentPos.x, y: currentPos.y };
+      lastSampledTimeRef.current = currentTime;
+    }, 50); // Sample every 10ms (0.01s)
+    
+    return () => clearInterval(sampleInterval);
+  }, [trialState]);
 
   // Animation loop
   useEffect(() => {
@@ -383,9 +418,9 @@ const HumanSteeringExperiment = () => {
     }
     
     return (
-      <div className="space-y-1">
-        {statusText && <p className={`text-sm ${statusColor}`}>{statusText}</p>}
-        {stateText && <p className="text-lg font-bold gray-red-900">{stateText}</p>}
+      <div className="space-y-2">
+        {statusText && <p className={`text-base font-semibold ${statusColor} tracking-tight`}>{statusText}</p>}
+        {stateText && <p className="text-xl font-bold text-gray-800 tracking-tight">{stateText}</p>}
       </div>
     );
   };
@@ -402,13 +437,13 @@ const HumanSteeringExperiment = () => {
     if (phase === ExperimentPhase.PRACTICE || phase === ExperimentPhase.TIME_TRIAL_PRACTICE) {
       controls.push(
         <>
-          Press <span className="font-bold text-blue-600">'N'</span> to continue to real trial
+          Press <span className="font-bold text-blue-600">'N'</span> to continue to actual trial
         </>
       );
     }
   
     return (
-      <div className="mt-2 text-sm text-gray-600">
+      <div className="mt-3 text-base text-gray-700 leading-relaxed">
         {controls.map((control, index) => (
           <p key={index}>{control}</p>
         ))}
@@ -424,9 +459,6 @@ const HumanSteeringExperiment = () => {
       
       case ExperimentPhase.ENVIRONMENT_SETUP:
         return <EnvironmentSetup />;
-      
-      case ExperimentPhase.SCREEN_CALIBRATION:
-        return <ScreenCalibration />;
       
       case ExperimentPhase.INSTRUCTIONS:
         return <Instructions />;

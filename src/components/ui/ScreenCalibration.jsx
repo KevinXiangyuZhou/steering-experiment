@@ -10,22 +10,22 @@ export const ScreenCalibration = () => {
           <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white p-6 text-center">
             <div className="flex items-center justify-center mb-2">
               <CreditCard className="w-8 h-8 mr-3" />
-              <h1 className="text-3xl font-bold">Screen Calibration</h1>
+              <h1 className="text-3xl font-bold tracking-tight">Screen Calibration</h1>
             </div>
-            <p className="text-lg text-blue-100">Calibrate your screen using a credit card</p>
+            <p className="text-lg text-blue-100 leading-relaxed">Calibrate your screen using a credit card</p>
           </div>
           
           {/* Content */}
           <div className="p-6">
             {/* Instructions */}
             <div className="text-center mb-6">
-              <div className="bg-blue-50 rounded-lg p-4 mb-4">
-                <p className="text-gray-700">
+              <div className="bg-blue-50 rounded-lg p-5 mb-4">
+                <p className="text-base text-gray-700 leading-relaxed">
                   Hold your <strong>credit card</strong> against the window below and adjust browser zoom until they match
                 </p>
               </div>
               
-              <div className="space-y-2 text-sm text-gray-600 max-w-lg mx-auto">
+              <div className="space-y-2 text-base text-gray-700 max-w-lg mx-auto leading-relaxed">
                 <p>Use Ctrl/⌘ + "+" or "−" to adjust zoom</p>
               </div>
             </div>
@@ -50,8 +50,8 @@ export const ScreenCalibration = () => {
             {/* Continue Button */}
             <div className="text-center">
               <div className="bg-white border-4 border-blue-600 px-8 py-4 rounded-2xl inline-block shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105">
-                <div className="text-lg font-semibold text-gray-600">
-                  Press <kbd className="bg-gray-200 text-gray-800 px-2 py-1 rounded text-lg font-bold">SPACEBAR</kbd> when done
+                <div className="text-xl font-semibold text-gray-700 leading-relaxed">
+                  Press <kbd className="bg-gray-200 text-gray-800 px-3 py-1 rounded text-lg font-mono font-bold">SPACEBAR</kbd> when done
                 </div>
               </div>
             </div>

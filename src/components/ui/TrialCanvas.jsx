@@ -82,10 +82,10 @@ export const TrialCanvas = ({
       {trialState === TrialState.FAILED && (phase === ExperimentPhase.TIME_TRIALS || phase === ExperimentPhase.SEQUENTIAL_TIME_TRIALS || phase === ExperimentPhase.TIME_TRIAL_PRACTICE) && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
           <div className="bg-gray-100 rounded-lg p-8 text-center">
-            <h3 className="text-xl font-bold mb-4 text-red-600">
+            <h3 className="text-2xl font-bold mb-4 text-red-600 tracking-tight">
               {failedDueToTimeout ? "TIME'S UP!" : "TRIAL FAILED"}
             </h3>
-            <p className="mb-4">
+            <p className="mb-4 text-base leading-relaxed text-gray-800">
               {failedDueToTimeout 
                 ? "You ran out of time. Try to move faster."
                 : shouldEnforceBoundaries()
@@ -93,7 +93,7 @@ export const TrialCanvas = ({
                 : "Complete the task to advance."
               }
             </p>
-            <p className="text-sm text-gray-600">Press R to restart trial</p>
+            <p className="text-base text-gray-700">Press <kbd className="bg-gray-200 text-gray-800 px-2 py-1 rounded text-sm font-mono font-bold">R</kbd> to restart trial</p>
           </div>
         </div>
       )}
