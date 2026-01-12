@@ -14,11 +14,43 @@ export const TrialCanvas = ({
   renderStatus,
   renderControls,
   canvasWidth,
-  canvasHeight
+  canvasHeight,
+  currentRepetition,
+  totalRepetitions,
+  isPractice
 }) => {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4">
       <div className="bg-white rounded-lg shadow-lg p-6">
+        {/* Progress bar for trial repetitions - show for main trials only */}
+        {!isPractice && phase !== ExperimentPhase.TIME_TRIAL_PRACTICE && currentRepetition && totalRepetitions && (
+          <div className="mb-4 w-full max-w-md mx-auto">
+            <div className="text-sm text-gray-600 mb-2 text-center">
+              Repetition {currentRepetition} of {totalRepetitions}
+            </div>
+            <div style={{
+              width: '100%', 
+              height: '24px', 
+              backgroundColor: '#e5e7eb', 
+              borderRadius: '6px', 
+              overflow: 'hidden', 
+              position: 'relative'
+            }}>
+              <div
+                style={{ 
+                  height: '100%',
+                  position: 'absolute',
+                  top: '0',
+                  left: '0',
+                  transition: 'width 0.3s ease',
+                  backgroundColor: '#86efac', // light green (green-300)
+                  width: `${((currentRepetition - 1) / totalRepetitions) * 100}%`
+                }}
+              />
+            </div>
+          </div>
+        )}
+        
         {/* Time bar container - always reserve space when in time-related phases */}
         <div className="mb-4 w-full max-w-md mx-auto">
           {phase === ExperimentPhase.TIME_TRIAL_PRACTICE && timeLimit && (

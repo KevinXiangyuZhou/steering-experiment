@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { ExperimentPhase, TrialState, BASIC_CONDITIONS } from './constants/experimentConstants.js';
+import { ExperimentPhase, TrialState, BASIC_CONDITIONS, TRIAL_REPETITIONS } from './constants/experimentConstants.js';
 import { getUrlParameters } from './utils/urlUtils.js';
-import { generateTunnelPath, generateSequentialTunnelPath } from './utils/tunnelGenerator.js';
+import { generateTunnelPath, generateSequentialTunnelPath, generateCornerPath } from './utils/tunnelGenerator.js';
 import { downloadData, uploadData } from './utils/dataManager.js';
 import { advanceTrial } from './utils/trialAdvancement.js';
 import { drawCanvas } from './components/canvas/DrawingFunctions.js';
@@ -46,6 +46,7 @@ const HumanSteeringExperiment = () => {
   const [isPractice, setIsPractice] = useState(false);
   const [currentPracticeCondition, setCurrentPracticeCondition] = useState(null);
   const [practicedConditions, setPracticedConditions] = useState(new Set());
+  const [currentRepetition, setCurrentRepetition] = useState(1); // Track current repetition (1-indexed)
 
   // Trial data
   const [trialData, setTrialData] = useState([]);
@@ -114,17 +115,36 @@ const HumanSteeringExperiment = () => {
   }, []);
 
   // Setup trial with given condition
-  const setupTrial = useCallback((condition) => {
+  // resetRepetition: if true, reset repetition counter to 1 (for new trial conditions)
+  //                  if false, keep current repetition (for restarting current trial)
+  const setupTrial = useCallback((condition, resetRepetition = true) => {
     let path;
     if (condition.tunnelType === 'sequential') {
       path = generateSequentialTunnelPath(condition);
       setTunnelType('sequential');
       setSegmentWidths([condition.segment1Width, condition.segment2Width]);
       setTunnelWidth(condition.segment1Width);
+    } else if (condition.tunnelType === 'corner') {
+      const [generatedPath, width] = generateCornerPath(
+        condition.tunnelWidth,
+        0.0,
+        0.46,
+        0.13,
+        condition.numCorners || 3,
+        condition.cornerOffset || 0.05,
+        0.002
+      );
+      path = generatedPath;
+      setTunnelType('corner');
+      setTunnelWidth(width);
     } else {
-      path = generateTunnelPath(condition.curvature);
+      const [generatedPath, width] = generateTunnelPath(
+        condition.tunnelWidth,
+        condition.curvature
+      );
+      path = generatedPath;
       setTunnelType('curved');
-      setTunnelWidth(condition.tunnelWidth);
+      setTunnelWidth(width);
     }
     setTunnelPath(path);
     setTimeLimit(condition.timeLimit);
@@ -148,6 +168,10 @@ const HumanSteeringExperiment = () => {
     setTrialStartTime(0);
     setTimeRemaining(condition.timeLimit || 0);
     setFailedDueToTimeout(false);
+    // Reset repetition counter only when starting a new trial condition
+    if (resetRepetition) {
+      setCurrentRepetition(1);
+    }
   }, []);
 
   const startTrialMovement = () => {
@@ -194,7 +218,7 @@ const HumanSteeringExperiment = () => {
       return;
     }
     
-    // Save data for successful main trials
+    // Save data for successful main trials with round number
     const currentCondition = currentConditions[currentTrial];
     const { id, ...condition } = currentCondition;
     const trialResult = {
@@ -202,24 +226,37 @@ const HumanSteeringExperiment = () => {
       completionTime,
       condition,
       trial_id: currentCondition.id,
+      round: currentRepetition, // Record which repetition this is (1-indexed)
       timestamps: [...timestampHistory],
       trajectory: [...trajectoryPoints],
       speeds: [...speedHistory]
     };
     
     setTrialData(prev => [...prev, trialResult]);
-    advanceTrial({
-      phase,
-      currentTrial,
-      currentConditions,
-      practicedConditions,
-      setPhase,
-      setCurrentTrial,
-      setCurrentConditions,
-      setCurrentPracticeCondition,
-      setIsPractice,
-      setupTrial
-    });
+    
+    // Check if we need to repeat this trial
+    // If we've completed fewer than TRIAL_REPETITIONS (5), repeat the same trial
+    // If we've completed all 5 repetitions, advance to the next trial
+    if (currentRepetition < TRIAL_REPETITIONS) {
+      // More repetitions needed - increment repetition counter and repeat same trial
+      setCurrentRepetition(prev => prev + 1);
+      setupTrial(currentCondition, false); // Don't reset repetition counter
+    } else {
+      // All repetitions (5) complete - advance to next tunnel task
+      setCurrentRepetition(1); // Reset repetition counter for next trial
+      advanceTrial({
+        phase,
+        currentTrial,
+        currentConditions,
+        practicedConditions,
+        setPhase,
+        setCurrentTrial,
+        setCurrentConditions,
+        setCurrentPracticeCondition,
+        setIsPractice,
+        setupTrial
+      });
+    }
   };
 
   // Handle timeout
@@ -493,6 +530,9 @@ const HumanSteeringExperiment = () => {
             renderControls={renderControls}
             canvasWidth={canvasDimensions.width}
             canvasHeight={canvasDimensions.height}
+            currentRepetition={currentRepetition}
+            totalRepetitions={TRIAL_REPETITIONS}
+            isPractice={isPractice}
           />
         );
     }

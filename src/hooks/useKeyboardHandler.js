@@ -64,7 +64,7 @@ export const useKeyboardHandler = ({
         
         case ExperimentPhase.MAIN_TRIALS:
           if (event.key === 'r') {
-            setupTrial(currentConditions[currentTrial]);
+            setupTrial(currentConditions[currentTrial], false); // Don't reset repetition when restarting
           }
           break;
         

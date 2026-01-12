@@ -20,7 +20,7 @@ export async function uploadExperimentData(experimentData) {
       version: '2.0' // Version of the experiment
     };
 
-    const docRef = await addDoc(collection(db, 'experiments'), dataWithTimestamp);
+    const docRef = await addDoc(collection(db, 'user_study_results'), dataWithTimestamp);
     console.log('Data uploaded successfully with ID:', docRef.id);
     return docRef.id;
   } catch (error) {

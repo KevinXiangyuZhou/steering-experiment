@@ -24,10 +24,12 @@ export const TrialState = {
 
 // Trial conditions
 export const BASIC_CONDITIONS = [
-  { id: 1, tunnelWidth: 0.05, curvature: 0.025, timeLimit: null, description: "wide tunnel, gentle curve" },
-  { id: 2, tunnelWidth: 0.05, curvature: 0.05, timeLimit: null, description: "wide tunnel, sharp curve" },
-  { id: 3, tunnelWidth: 0.02, curvature: 0.025, timeLimit: null, description: "narrow tunnel, gentle curve" },
-  { id: 4, tunnelWidth: 0.02, curvature: 0.05, timeLimit: null, description: "narrow tunnel, sharp curve" },
+  { id: 1, tunnelWidth: 0.02, curvature: 0.025, timeLimit: null, description: "narrow tunnel, gentle curve" },
+  { id: 2, tunnelWidth: 0.04, curvature: 0.025, timeLimit: null, description: "narrow tunnel, sharp curve" },
+  { id: 3, tunnelType: 'corner', tunnelWidth: 0.02, numCorners: 2, cornerOffset: 0.1, timeLimit: null, description: "narrow tunnel, 2 corners" },
+  { id: 4, tunnelType: 'corner', tunnelWidth: 0.04, numCorners: 2, cornerOffset: 0.1, timeLimit: null, description: "narrow tunnel, 3 corners" },
+  // { id: 7, tunnelType: 'corner', tunnelWidth: 0.05, numCorners: 2, cornerOffset: 0.05, timeLimit: null, description: "wide tunnel, 2 corners" },
+  // { id: 8, tunnelType: 'corner', tunnelWidth: 0.05, numCorners: 3, cornerOffset: 0.05, timeLimit: null, description: "wide tunnel, 3 corners" },
 ];
 
 // Temporarily commented out
@@ -81,5 +83,6 @@ export const SCALE = 1000;
 // Trial constants
 export const START_BUTTON_RADIUS = 0.008;
 export const TARGET_RADIUS = 0.01;
-export const TUNNEL_STEP = 0.002;
+export const TUNNEL_STEP = 0.001;
+export const TRIAL_REPETITIONS = 2; // Number of times to repeat each trial
 
