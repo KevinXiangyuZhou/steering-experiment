@@ -180,3 +180,130 @@ export const generateCornerPath = (
   return [tunnelPath, width];
 };
 
+/**
+ * Generate a lasso selection path that loops around target squares in a grid.
+ * 
+ * Creates a clockwise path around all target squares ('X') in the grid layout,
+ * forming a closed loop that traces the outer boundary of the target cluster.
+ * 
+ * @param {Object} condition - Trial condition with lasso parameters:
+ *   - grid_layout: Array of strings defining the grid (e.g., ["X X .", ". X X"])
+ *   - icon_radius: Half the size of each square (default: 0.01)
+ *   - icon_spacing: Distance between icon centers (default: 0.05)
+ *   - grid_origin: [x, y] origin of grid (default: [0.1, 0.1])
+ *   - margin_size: Gap between icons (computed as icon_spacing - 2 * icon_radius)
+ * @param {number} stepSize - Step size along path. Default 0.002.
+ * @returns {Array} Array containing [tunnel_path, width, startPos, endPos] where:
+ *   - tunnel_path is an array of {x, y} objects
+ *   - width is the effective tunnel width (margin)
+ *   - startPos is {x, y} start position computed from grid top-left corner
+ *   - endPos is {x, y} end position computed from grid top-left corner
+ */
+export const generateLassoPath = (condition, stepSize = 0.002) => {
+  const {
+    grid_layout,
+    icon_radius = 0.01,
+    icon_spacing = 0.05,
+    grid_origin = [0.1, 0.1],
+    margin_size = null
+  } = condition;
+
+  // Compute margin if not provided
+  const margin = margin_size !== null ? margin_size : icon_spacing - 2 * icon_radius;
+
+  // Parse grid layout to find target positions
+  const targets = [];
+  const rows = grid_layout.length;
+
+  for (let row = 0; row < rows; row++) {
+    const cells = grid_layout[row].split(/\s+/).filter(c => c.length > 0);
+    for (let col = 0; col < cells.length; col++) {
+      if (cells[col] === 'X') {
+        // Grid cell positioning: x = origin_x + col_idx * icon_spacing
+        const x = grid_origin[0] + col * icon_spacing;
+        const y = grid_origin[1] + row * icon_spacing;
+        targets.push({ x, y, row, col });
+      }
+    }
+  }
+
+  if (targets.length === 0) {
+    // Fallback: return a simple square path
+    const size = 0.1;
+    const fallbackPath = [
+      { x: grid_origin[0], y: grid_origin[1] },
+      { x: grid_origin[0] + size, y: grid_origin[1] },
+      { x: grid_origin[0] + size, y: grid_origin[1] + size },
+      { x: grid_origin[0], y: grid_origin[1] + size },
+      { x: grid_origin[0], y: grid_origin[1] }
+    ];
+    const fallbackStart = fallbackPath[0];
+    const fallbackEnd = fallbackPath[fallbackPath.length - 1];
+    return [fallbackPath, margin, fallbackStart, fallbackEnd];
+  }
+
+  // Compute start and end positions based on top-left corner of target cluster
+  // Find top-left target: min_y (topmost), then min_x among topmost (leftmost)
+  const topmostY = Math.min(...targets.map(t => t.y));
+  const topmostTargets = targets.filter(t => Math.abs(t.y - topmostY) < 1e-6);
+  const leftmostX = Math.min(...topmostTargets.map(t => t.x));
+  const topLeftTarget = { x: leftmostX, y: topmostY };
+
+  // Compute gap intersection (corner between icons)
+  const gapOffset = icon_spacing * 0.5;
+  const cornerX = topLeftTarget.x - gapOffset;  // Left of leftmost icon
+  const cornerY = topLeftTarget.y - gapOffset; // Above topmost icon
+
+  // Start position: left of corner by margin_size
+  const startPos = {
+    x: cornerX - margin,
+    y: cornerY
+  };
+
+  // End position: same x as corner, slightly below
+  const endPos = {
+    x: cornerX,
+    y: cornerY + gapOffset * 0.5
+  };
+
+  // Find bounding box of targets with margin
+  const minX = Math.min(...targets.map(t => t.x)) - icon_radius - margin;
+  const maxX = Math.max(...targets.map(t => t.x)) + icon_radius + margin;
+  const minY = Math.min(...targets.map(t => t.y)) - icon_radius - margin;
+  const maxY = Math.max(...targets.map(t => t.y)) + icon_radius + margin;
+
+  // Generate clockwise path around the bounding box
+  // The path forms a closed loop that starts and ends at the same point
+  // Start/end positions will be at path[0] and path[path.length - 1] (like other tunnel types)
+  const path = [];
+  
+  // Start at top-left corner of bounding box
+  path.push({ x: minX, y: minY });
+  
+  // Top edge (left to right)
+  for (let x = minX + stepSize; x <= maxX; x += stepSize) {
+    path.push({ x, y: minY });
+  }
+  
+  // Right edge (top to bottom)
+  for (let y = minY + stepSize; y <= maxY; y += stepSize) {
+    path.push({ x: maxX, y });
+  }
+  
+  // Bottom edge (right to left)
+  for (let x = maxX - stepSize; x >= minX; x -= stepSize) {
+    path.push({ x, y: maxY });
+  }
+  
+  // Left edge (bottom to top, back to top-left corner)
+  for (let y = maxY - stepSize; y >= minY; y -= stepSize) {
+    path.push({ x: minX, y });
+  }
+  
+  // Close the loop by returning to start position
+  path.push({ x: minX, y: minY });
+
+  // Return path, effective tunnel width (margin), and computed start/end positions
+  return [path, margin, startPos, endPos];
+};
+

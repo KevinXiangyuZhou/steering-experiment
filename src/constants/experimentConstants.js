@@ -6,6 +6,8 @@ export const ExperimentPhase = {
   INSTRUCTIONS: 'instructions',
   PRACTICE: 'practice',
   MAIN_TRIALS: 'main_trials',
+  LASSO_INSTRUCTIONS: 'lasso_instructions',
+  LASSO_TRIALS: 'lasso_trials',
   SEQUENTIAL_TRIALS: 'sequential_trials',
   TIME_CONSTRAINT_INTRO: 'time_constraint_intro',
   TIME_TRIAL_PRACTICE: 'time_trial_practice',
@@ -25,9 +27,9 @@ export const TrialState = {
 // Trial conditions
 export const BASIC_CONDITIONS = [
   { id: 1, tunnelWidth: 0.02, curvature: 0.025, timeLimit: null, description: "narrow tunnel, gentle curve" },
-  { id: 2, tunnelWidth: 0.04, curvature: 0.025, timeLimit: null, description: "narrow tunnel, sharp curve" },
-  { id: 3, tunnelType: 'corner', tunnelWidth: 0.02, numCorners: 2, cornerOffset: 0.1, timeLimit: null, description: "narrow tunnel, 2 corners" },
-  { id: 4, tunnelType: 'corner', tunnelWidth: 0.04, numCorners: 2, cornerOffset: 0.1, timeLimit: null, description: "narrow tunnel, 3 corners" },
+  // { id: 2, tunnelWidth: 0.04, curvature: 0.025, timeLimit: null, description: "narrow tunnel, sharp curve" },
+  // { id: 3, tunnelType: 'corner', tunnelWidth: 0.02, numCorners: 2, cornerOffset: 0.1, timeLimit: null, description: "narrow tunnel, 2 corners" },
+  // { id: 4, tunnelType: 'corner', tunnelWidth: 0.04, numCorners: 2, cornerOffset: 0.1, timeLimit: null, description: "narrow tunnel, 3 corners" },
   // { id: 7, tunnelType: 'corner', tunnelWidth: 0.05, numCorners: 2, cornerOffset: 0.05, timeLimit: null, description: "wide tunnel, 2 corners" },
   // { id: 8, tunnelType: 'corner', tunnelWidth: 0.05, numCorners: 3, cornerOffset: 0.05, timeLimit: null, description: "wide tunnel, 3 corners" },
 ];
@@ -70,6 +72,57 @@ export const BASIC_CONDITIONS = [
 //   { id: 26, tunnelType: 'sequential', segmentType: 'curvature', segment1Width: 0.05, segment2Width: 0.05, segment1Curvature: 1, segment2Curvature: 0.05, timeLimit: 1, description: "straight-to-curved segments time limit 1s" },
 // ];
 
+// Lasso selection trial conditions
+export const LASSO_CONDITIONS = [
+  {
+    id: 101,
+    tunnelType: 'lasso',
+    grid_layout: [
+      ". . . . . . . . .",
+      ". X X . . . . . .",
+      ". X X X X X X X .",
+      ". X X X X X X X .",
+      ". . . . . . . . ."
+    ],
+    icon_radius: 0.015,
+    icon_spacing: 0.035,
+    grid_origin: [0.1, 0.05],
+    timeLimit: null,
+    description: "L-shaped target cluster, medium spacing"
+  },
+  {
+    id: 102,
+    tunnelType: 'lasso',
+    grid_layout: [
+      ". . . . . . . . .",
+      ". X X . . . . . .",
+      ". X X X X X X X .",
+      ". X X X X X X X ."
+    ],
+    icon_radius: 0.015,
+    icon_spacing: 0.035,
+    grid_origin: [0.1, 0.05],
+    timeLimit: null,
+    description: "L-shaped target cluster, medium spacing"
+  },
+  {
+    id: 103,
+    tunnelType: 'lasso',
+    grid_layout: [
+      "O O O O O O O O O",
+      "O X X O O O O O O",
+      "O X X X X X X X O",
+      "O X X X X X X X O",
+    ],
+    icon_radius: 0.015,
+    icon_spacing: 0.035,
+    grid_origin: [0.1, 0.05],
+    timeLimit: null,
+    description: "L-shaped target cluster, medium spacing"
+  },
+  
+];
+
 // Temporary empty arrays to prevent import errors
 export const TIME_CONDITIONS = [];
 export const SEQUENTIAL_CONDITIONS = [];
@@ -84,5 +137,6 @@ export const SCALE = 1000;
 export const START_BUTTON_RADIUS = 0.008;
 export const TARGET_RADIUS = 0.01;
 export const TUNNEL_STEP = 0.001;
-export const TRIAL_REPETITIONS = 2; // Number of times to repeat each trial
+export const BASIC_TRIAL_REPETITIONS = 1; // Number of times to repeat each basic condition trial
+export const LASSO_TRIAL_REPETITIONS = 1; // Number of times to repeat each lasso trial
 

@@ -474,10 +474,10 @@ export const drawCursor = (ctx, cursorPos, scale) => {
   ctx.fill();
 };
 
-export const drawStartButton = (ctx, startButtonPos, scale) => {
+export const drawStartButton = (ctx, startButtonPos, scale, customRadius = null) => {
   const x = startButtonPos.x * scale;
   const y = startButtonPos.y * scale;
-  const radius = START_BUTTON_RADIUS * scale;
+  const radius = (customRadius !== null ? customRadius : START_BUTTON_RADIUS) * scale;
   
   ctx.fillStyle = '#00FF00';
   ctx.beginPath();
@@ -485,7 +485,7 @@ export const drawStartButton = (ctx, startButtonPos, scale) => {
   ctx.fill();
   
   ctx.strokeStyle = '#009900';
-  ctx.lineWidth = 3;
+  ctx.lineWidth = Math.max(1, radius / 3); // Scale line width with radius
   ctx.stroke();
   
   ctx.fillStyle = '#000000';
@@ -493,10 +493,10 @@ export const drawStartButton = (ctx, startButtonPos, scale) => {
   ctx.textAlign = 'center';
 };
 
-export const drawTarget = (ctx, targetPos, scale) => {
+export const drawTarget = (ctx, targetPos, scale, customRadius = null) => {
   const x = targetPos.x * scale;
   const y = targetPos.y * scale;
-  const radius = TARGET_RADIUS * scale;
+  const radius = (customRadius !== null ? customRadius : TARGET_RADIUS) * scale;
   
   ctx.fillStyle = '#FF0000';
   ctx.beginPath();
@@ -504,8 +504,56 @@ export const drawTarget = (ctx, targetPos, scale) => {
   ctx.fill();
   
   ctx.strokeStyle = '#990000';
-  ctx.lineWidth = 2;
+  ctx.lineWidth = Math.max(1, radius / 5); // Scale line width with radius
   ctx.stroke();
+};
+
+/**
+ * Draw lasso selection grid with target squares
+ * @param {CanvasRenderingContext2D} ctx - Canvas context
+ * @param {Object} lassoConfig - Configuration object with:
+ *   - grid_layout: Array of strings defining the grid
+ *   - icon_radius: Half the size of each square (full size = icon_radius * 2)
+ *   - icon_spacing: Distance between icon centers
+ *   - grid_origin: [x, y] origin of grid (top-left corner)
+ * @param {number} scale - Scale factor for rendering
+ */
+export const drawLassoGrid = (ctx, lassoConfig, scale) => {
+  if (!lassoConfig) return;
+  
+  const { grid_layout, icon_radius, icon_spacing, grid_origin } = lassoConfig;
+  const [originX, originY] = grid_origin;
+  
+  // Draw grid squares
+  for (let row = 0; row < grid_layout.length; row++) {
+    const cells = grid_layout[row].split(/\s+/).filter(c => c.length > 0);
+    for (let col = 0; col < cells.length; col++) {
+      const cellType = cells[col];
+      const x = originX + col * icon_spacing;
+      const y = originY + row * icon_spacing;
+      
+      const screenX = x * scale;
+      const screenY = y * scale;
+      const size = icon_radius * 2 * scale;
+      
+      if (cellType === 'X') {
+        // Draw target square (yellow)
+        ctx.fillStyle = '#FFD700'; // Yellow
+        ctx.fillRect(screenX - size/2, screenY - size/2, size, size);
+        ctx.strokeStyle = '#CCAA00';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(screenX - size/2, screenY - size/2, size, size);
+      } else if (cellType === '.' || cellType === ' ') {
+        // Draw empty/distractor cell (light grey)
+        ctx.fillStyle = '#E0E0E0'; // Light grey
+        ctx.fillRect(screenX - size/2, screenY - size/2, size, size);
+        ctx.strokeStyle = '#CCCCCC';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(screenX - size/2, screenY - size/2, size, size);
+      }
+      // 'O' cells are invisible, so we don't draw them
+    }
+  }
 };
 
 export const drawCanvas = (
@@ -522,29 +570,50 @@ export const drawCanvas = (
   targetPos,
   canvasWidth,
   canvasHeight,
-  scale
+  scale,
+  lassoConfig = null
 ) => {
   ctx.clearRect(0, 0, canvasWidth, canvasHeight);
   
-  // Draw tunnel
-  if (tunnelPath.length > 0) {
+  // Draw lasso grid first (if lasso tunnel type)
+  if (tunnelType === 'lasso' && lassoConfig) {
+    drawLassoGrid(ctx, lassoConfig, scale);
+  }
+  
+  // Draw tunnel (skip for lasso trials - users draw freely)
+  // Draw tunnel BEFORE buttons so buttons appear on top
+  if (tunnelPath.length > 0 && tunnelType !== 'lasso') {
     drawTunnel(ctx, tunnelPath, tunnelType, tunnelWidth, segmentWidths, scale);
   }
   
-  // Draw excursion markers (in phases where boundaries are marked)
-  if (shouldMarkBoundaries && excursionMarkers.length > 0) {
+  // Draw excursion markers (skip for lasso trials - no boundaries to enforce)
+  if (shouldMarkBoundaries && tunnelType !== 'lasso' && excursionMarkers.length > 0) {
     drawExcursionMarkers(ctx, excursionMarkers, scale);
   }
   
-  // Draw cursor
-  drawCursor(ctx, cursorPos, scale);
-  
-  // Draw start button
-  if (trialState === 'waiting_for_start') {
-    drawStartButton(ctx, startButtonPos, scale);
+  // Draw start button and target AFTER tunnel so they appear on top
+  if (tunnelType === 'lasso' && lassoConfig) {
+    // Use much smaller icons for lasso trials (0.003 radius = 6mm diameter vs 20-30mm grid squares)
+    const lassoIconRadius = 0.003;
+    
+    // Draw start button
+    if (trialState === 'waiting_for_start') {
+      drawStartButton(ctx, startButtonPos, scale, lassoIconRadius);
+    }
+    
+    // Draw target
+    drawTarget(ctx, targetPos, scale, lassoIconRadius);
+  } else {
+    // Draw start button (normal size for non-lasso trials)
+    if (trialState === 'waiting_for_start') {
+      drawStartButton(ctx, startButtonPos, scale);
+    }
+    
+    // Draw target (normal size for non-lasso trials)
+    drawTarget(ctx, targetPos, scale);
   }
   
-  // Draw target
-  drawTarget(ctx, targetPos, scale);
+  // Draw cursor last so it appears on top of everything
+  drawCursor(ctx, cursorPos, scale);
 };
 

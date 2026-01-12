@@ -1,7 +1,8 @@
 import { 
   ExperimentPhase,
   SEQUENTIAL_CONDITIONS,
-  SEQUENTIAL_TIME_CONDITIONS
+  SEQUENTIAL_TIME_CONDITIONS,
+  LASSO_CONDITIONS
 } from '../constants/experimentConstants.js';
 import { generateConditionKey } from './trialManager.js';
 
@@ -22,7 +23,10 @@ export const advanceTrial = ({
   
   if (nextTrial >= currentConditions.length) {
     if (phase === ExperimentPhase.MAIN_TRIALS) {
-      // Skip sequential and time trials - go directly to complete
+      // Transition to lasso instructions after basic trials
+      setPhase(ExperimentPhase.LASSO_INSTRUCTIONS);
+    } else if (phase === ExperimentPhase.LASSO_TRIALS) {
+      // After lasso trials, go to complete
       setPhase(ExperimentPhase.COMPLETE);
     } 
     // Temporarily commented out - sequential and time trial phases

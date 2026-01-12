@@ -4,7 +4,8 @@ import {
   BASIC_CONDITIONS, 
   SEQUENTIAL_CONDITIONS, 
   TIME_CONDITIONS, 
-  SEQUENTIAL_TIME_CONDITIONS 
+  SEQUENTIAL_TIME_CONDITIONS,
+  LASSO_CONDITIONS
 } from '../constants/experimentConstants.js';
 import { generateConditionKey } from '../utils/trialManager.js';
 
@@ -63,6 +64,23 @@ export const useKeyboardHandler = ({
           break;
         
         case ExperimentPhase.MAIN_TRIALS:
+          if (event.key === 'r') {
+            setupTrial(currentConditions[currentTrial], false); // Don't reset repetition when restarting
+          }
+          break;
+        
+        case ExperimentPhase.LASSO_INSTRUCTIONS:
+          if (event.key === ' ') {
+            // Start lasso trials
+            setPhase(ExperimentPhase.LASSO_TRIALS);
+            setCurrentTrial(0);
+            setCurrentConditions([...LASSO_CONDITIONS]);
+            setIsPractice(false);
+            setupTrial(LASSO_CONDITIONS[0]);
+          }
+          break;
+        
+        case ExperimentPhase.LASSO_TRIALS:
           if (event.key === 'r') {
             setupTrial(currentConditions[currentTrial], false); // Don't reset repetition when restarting
           }

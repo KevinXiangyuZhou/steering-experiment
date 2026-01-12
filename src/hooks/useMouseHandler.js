@@ -34,6 +34,7 @@ export const useMouseHandler = ({
       ExperimentPhase.PRACTICE, 
       ExperimentPhase.MAIN_TRIALS, 
       ExperimentPhase.SEQUENTIAL_TRIALS,
+      ExperimentPhase.LASSO_TRIALS,
       ExperimentPhase.TIME_TRIAL_PRACTICE, 
       ExperimentPhase.TIME_TRIALS,
       ExperimentPhase.SEQUENTIAL_TIME_TRIALS
@@ -49,16 +50,20 @@ export const useMouseHandler = ({
     
     const distance = Math.sqrt((x - startButtonPos.x) ** 2 + (y - startButtonPos.y) ** 2);
     
-    if (distance <= START_BUTTON_RADIUS) {
+    // Use smaller radius for lasso trials
+    const buttonRadius = tunnelType === 'lasso' ? 0.003 : START_BUTTON_RADIUS;
+    
+    if (distance <= buttonRadius) {
       onStartTrial();
     }
-  }, [phase, trialState, startButtonPos, onStartTrial]);
+  }, [phase, trialState, startButtonPos, tunnelType, onStartTrial]);
 
   const handleMouseMove = useCallback((event) => {
     if (![
       ExperimentPhase.PRACTICE, 
       ExperimentPhase.MAIN_TRIALS, 
       ExperimentPhase.SEQUENTIAL_TRIALS,
+      ExperimentPhase.LASSO_TRIALS,
       ExperimentPhase.TIME_TRIAL_PRACTICE, 
       ExperimentPhase.TIME_TRIALS,
       ExperimentPhase.SEQUENTIAL_TIME_TRIALS
@@ -122,7 +127,11 @@ export const useMouseHandler = ({
     
     // Check for trial completion
     const targetDist = Math.sqrt((x - targetPos.x) ** 2 + (y - targetPos.y) ** 2);
-    if (targetDist < TARGET_RADIUS) {
+    
+    // Use smaller radius for lasso trials
+    const targetRadius = tunnelType === 'lasso' ? 0.003 : TARGET_RADIUS;
+    
+    if (targetDist < targetRadius) {
       onTrialComplete(true);
     }
     

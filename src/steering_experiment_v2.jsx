@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { ExperimentPhase, TrialState, BASIC_CONDITIONS, TRIAL_REPETITIONS } from './constants/experimentConstants.js';
+import { ExperimentPhase, TrialState, BASIC_CONDITIONS, BASIC_TRIAL_REPETITIONS, LASSO_TRIAL_REPETITIONS } from './constants/experimentConstants.js';
 import { getUrlParameters } from './utils/urlUtils.js';
-import { generateTunnelPath, generateSequentialTunnelPath, generateCornerPath } from './utils/tunnelGenerator.js';
+import { generateTunnelPath, generateSequentialTunnelPath, generateCornerPath, generateLassoPath } from './utils/tunnelGenerator.js';
 import { downloadData, uploadData } from './utils/dataManager.js';
 import { advanceTrial } from './utils/trialAdvancement.js';
 import { drawCanvas } from './components/canvas/DrawingFunctions.js';
@@ -11,6 +11,7 @@ import { useTrialTimer } from './hooks/useTrialTimer.js';
 import { WelcomeScreen } from './components/ui/WelcomeScreen.jsx';
 import { EnvironmentSetup } from './components/ui/EnvironmentSetup.jsx';
 import { Instructions } from './components/ui/Instructions.jsx';
+import { LassoInstructions } from './components/ui/LassoInstructions.jsx';
 import { TimeConstraintIntro } from './components/ui/TimeConstraintIntro.jsx';
 import { CompleteScreen } from './components/ui/CompleteScreen.jsx';
 import { TrialCanvas } from './components/ui/TrialCanvas.jsx';
@@ -72,6 +73,7 @@ const HumanSteeringExperiment = () => {
   const [tunnelWidth, setTunnelWidth] = useState(0.015);
   const [tunnelType, setTunnelType] = useState('curved');
   const [segmentWidths, setSegmentWidths] = useState([0.015, 0.025, 0.015]);
+  const [lassoConfig, setLassoConfig] = useState(null); // Store lasso grid configuration
   const [targetPos, setTargetPos] = useState({ x: 0, y: 0 });
   const [startButtonPos, setStartButtonPos] = useState({ x: 0, y: 0 });
 
@@ -82,14 +84,16 @@ const HumanSteeringExperiment = () => {
   const [failedDueToTimeout, setFailedDueToTimeout] = useState(false);
 
   // Check if current phase should enforce boundary constraints
+  // Note: Lasso trials don't enforce boundaries - users draw freely
   const shouldEnforceBoundaries = useCallback(() => {
-    return phase === ExperimentPhase.PRACTICE || phase === ExperimentPhase.MAIN_TRIALS || phase === ExperimentPhase.SEQUENTIAL_TRIALS;
-  }, [phase]);
+    return (phase === ExperimentPhase.PRACTICE || phase === ExperimentPhase.MAIN_TRIALS || phase === ExperimentPhase.SEQUENTIAL_TRIALS) && tunnelType !== 'lasso';
+  }, [phase, tunnelType]);
 
   // Check if current phase should mark boundary violations
+  // Note: Lasso trials don't mark boundaries - users draw freely
   const shouldMarkBoundaries = useCallback(() => {
-    return phase === ExperimentPhase.PRACTICE || phase === ExperimentPhase.MAIN_TRIALS || phase === ExperimentPhase.SEQUENTIAL_TRIALS;
-  }, [phase]);
+    return (phase === ExperimentPhase.PRACTICE || phase === ExperimentPhase.MAIN_TRIALS || phase === ExperimentPhase.SEQUENTIAL_TRIALS) && tunnelType !== 'lasso';
+  }, [phase, tunnelType]);
 
   // Calculate canvas dimensions on mount and window resize
   useEffect(() => {
@@ -124,6 +128,7 @@ const HumanSteeringExperiment = () => {
       setTunnelType('sequential');
       setSegmentWidths([condition.segment1Width, condition.segment2Width]);
       setTunnelWidth(condition.segment1Width);
+      setLassoConfig(null); // Clear lasso config
     } else if (condition.tunnelType === 'corner') {
       const [generatedPath, width] = generateCornerPath(
         condition.tunnelWidth,
@@ -137,6 +142,24 @@ const HumanSteeringExperiment = () => {
       path = generatedPath;
       setTunnelType('corner');
       setTunnelWidth(width);
+      setLassoConfig(null); // Clear lasso config
+    } else if (condition.tunnelType === 'lasso') {
+      const [generatedPath, width, lassoStartPos, lassoEndPos] = generateLassoPath(condition, 0.002);
+      path = generatedPath;
+      setTunnelType('lasso');
+      setTunnelWidth(width);
+      // Store lasso-specific data for rendering
+      setLassoConfig({
+        grid_layout: condition.grid_layout,
+        icon_radius: condition.icon_radius || 0.01,
+        icon_spacing: condition.icon_spacing || 0.05,
+        grid_origin: condition.grid_origin || [0.1, 0.1]
+      });
+      // For lasso trials, use computed start/end positions from grid
+      setStartButtonPos(lassoStartPos);
+      setTargetPos(lassoEndPos);
+      setCursorPos(lassoStartPos);
+      cursorPosRef.current = lassoStartPos;
     } else {
       const [generatedPath, width] = generateTunnelPath(
         condition.tunnelWidth,
@@ -145,17 +168,24 @@ const HumanSteeringExperiment = () => {
       path = generatedPath;
       setTunnelType('curved');
       setTunnelWidth(width);
+      // Clear lasso config when switching to non-lasso trials
+      setLassoConfig(null);
     }
     setTunnelPath(path);
     setTimeLimit(condition.timeLimit);
     
-    const startPos = path[0];
-    const endPos = path[path.length - 1];
+    // For non-lasso trials, use path endpoints as start/end positions
+    // (Lasso trials already set start/end positions above)
+    if (condition.tunnelType !== 'lasso') {
+      const startPos = path[0];
+      const endPos = path[path.length - 1];
+      
+      setStartButtonPos(startPos);
+      setTargetPos(endPos);
+      setCursorPos(startPos);
+      cursorPosRef.current = startPos; // Update ref immediately
+    }
     
-    setStartButtonPos(startPos);
-    setTargetPos(endPos);
-    setCursorPos(startPos);
-    cursorPosRef.current = startPos; // Update ref immediately
     setCursorVel({ x: 0, y: 0 });
     
     setTrialState(TrialState.WAITING_FOR_START);
@@ -235,14 +265,17 @@ const HumanSteeringExperiment = () => {
     setTrialData(prev => [...prev, trialResult]);
     
     // Check if we need to repeat this trial
-    // If we've completed fewer than TRIAL_REPETITIONS (5), repeat the same trial
-    // If we've completed all 5 repetitions, advance to the next trial
-    if (currentRepetition < TRIAL_REPETITIONS) {
+    // Determine repetition count based on trial type
+    const repetitions = currentCondition.tunnelType === 'lasso' 
+      ? LASSO_TRIAL_REPETITIONS 
+      : BASIC_TRIAL_REPETITIONS;
+    
+    if (currentRepetition < repetitions) {
       // More repetitions needed - increment repetition counter and repeat same trial
       setCurrentRepetition(prev => prev + 1);
       setupTrial(currentCondition, false); // Don't reset repetition counter
     } else {
-      // All repetitions (5) complete - advance to next tunnel task
+      // All repetitions complete - advance to next tunnel task
       setCurrentRepetition(1); // Reset repetition counter for next trial
       advanceTrial({
         phase,
@@ -379,7 +412,8 @@ const HumanSteeringExperiment = () => {
         targetPos,
         canvasDimensions.width,
         canvasDimensions.height,
-        canvasDimensions.scale
+        canvasDimensions.scale,
+        lassoConfig
       );
       animationRef.current = requestAnimationFrame(animate);
     };
@@ -390,7 +424,7 @@ const HumanSteeringExperiment = () => {
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [cursorPos, trialState, tunnelPath, startButtonPos, targetPos, tunnelWidth, excursionMarkers, shouldMarkBoundaries, hasExcursionMarker, tunnelType, segmentWidths, canvasDimensions]);
+  }, [cursorPos, trialState, tunnelPath, startButtonPos, targetPos, tunnelWidth, excursionMarkers, shouldMarkBoundaries, hasExcursionMarker, tunnelType, segmentWidths, canvasDimensions, lassoConfig]);
 
   const handleUploadData = async () => {
     setUploadStatus('uploading');
@@ -431,6 +465,9 @@ const HumanSteeringExperiment = () => {
     } else if (phase === ExperimentPhase.MAIN_TRIALS && currentTrial < currentConditions.length) {
       statusText = `Trial ${getNormalTrialNumber(phase, currentTrial)}/${getNormalTotalTrials()}`;
       statusColor = "text-blue-600";
+    } else if (phase === ExperimentPhase.LASSO_TRIALS && currentTrial < currentConditions.length) {
+      statusText = `Lasso Trial ${currentTrial + 1}/${currentConditions.length}`;
+      statusColor = "text-orange-600";
     } else if (phase === ExperimentPhase.SEQUENTIAL_TRIALS && currentTrial < currentConditions.length) {
       statusText = `Trial ${getNormalTrialNumber(phase, currentTrial)}/${getNormalTotalTrials()}`;
       statusColor = "text-indigo-600";
@@ -449,7 +486,11 @@ const HumanSteeringExperiment = () => {
     if (trialState === TrialState.WAITING_FOR_START) {
       stateText = "Click the green button to begin";
     } else if (trialState === TrialState.IN_PROGRESS) {
-      stateText = "Navigate to the red target";
+      if (phase === ExperimentPhase.LASSO_TRIALS) {
+        stateText = "Draw a loop around all yellow targets";
+      } else {
+        stateText = "Navigate to the red target";
+      }
     } else if (trialState === TrialState.FAILED) {
       stateText = "Trial failed, please try again";
     }
@@ -500,6 +541,9 @@ const HumanSteeringExperiment = () => {
       case ExperimentPhase.INSTRUCTIONS:
         return <Instructions />;
       
+      case ExperimentPhase.LASSO_INSTRUCTIONS:
+        return <LassoInstructions />;
+      
       case ExperimentPhase.TIME_CONSTRAINT_INTRO:
         return <TimeConstraintIntro />;
       
@@ -515,6 +559,12 @@ const HumanSteeringExperiment = () => {
         );
       
       default:
+        // Determine repetition count based on current trial type
+        const currentCondition = currentConditions[currentTrial];
+        const totalRepetitions = currentCondition && currentCondition.tunnelType === 'lasso'
+          ? LASSO_TRIAL_REPETITIONS
+          : BASIC_TRIAL_REPETITIONS;
+        
         return (
           <TrialCanvas
             canvasRef={canvasRef}
@@ -531,7 +581,7 @@ const HumanSteeringExperiment = () => {
             canvasWidth={canvasDimensions.width}
             canvasHeight={canvasDimensions.height}
             currentRepetition={currentRepetition}
-            totalRepetitions={TRIAL_REPETITIONS}
+            totalRepetitions={totalRepetitions}
             isPractice={isPractice}
           />
         );
