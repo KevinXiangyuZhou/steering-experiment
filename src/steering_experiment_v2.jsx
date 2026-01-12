@@ -351,7 +351,8 @@ const HumanSteeringExperiment = () => {
     setHasExcursionMarker,
     onTrialComplete: completeTrial,
     onStartTrial: startTrialMovement,
-    scale: canvasDimensions?.scale || 1000
+    scale: canvasDimensions?.scale || 1000,
+    lassoConfig
   });
 
   // Time-based sampling of cursor position (every 0.01s = 100Hz)

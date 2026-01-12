@@ -586,8 +586,10 @@ export const drawCanvas = (
     drawTunnel(ctx, tunnelPath, tunnelType, tunnelWidth, segmentWidths, scale);
   }
   
-  // Draw excursion markers (skip for lasso trials - no boundaries to enforce)
-  if (shouldMarkBoundaries && tunnelType !== 'lasso' && excursionMarkers.length > 0) {
+  // Draw excursion markers
+  // For lasso trials: show markers when hitting gray icons
+  // For other trials: show markers when hitting tunnel boundaries
+  if (excursionMarkers.length > 0 && (tunnelType === 'lasso' || shouldMarkBoundaries)) {
     drawExcursionMarkers(ctx, excursionMarkers, scale);
   }
   

@@ -1,7 +1,7 @@
 import { useRef, useCallback } from 'react';
 import { TrialState, START_BUTTON_RADIUS, TARGET_RADIUS } from '../constants/experimentConstants.js';
 import { ExperimentPhase } from '../constants/experimentConstants.js';
-import { checkTunnelExcursions } from '../utils/excursionChecker.js';
+import { checkTunnelExcursions, checkLassoGrayIconCollision } from '../utils/excursionChecker.js';
 
 export const useMouseHandler = ({
   phase,
@@ -24,7 +24,8 @@ export const useMouseHandler = ({
   setHasExcursionMarker,
   onTrialComplete,
   onStartTrial,
-  scale
+  scale,
+  lassoConfig = null
 }) => {
   const lastTimeRef = useRef(0);
   const lastMousePosRef = useRef(null);
@@ -98,8 +99,34 @@ export const useMouseHandler = ({
     
     // Note: Position recording is now done via time-based sampling (not on every mouse move)
     
-    // Check for excursions and mark them
-    if (shouldMarkBoundaries()) {
+    // Check for excursions - different logic for lasso vs other trials
+    if (tunnelType === 'lasso' && lassoConfig) {
+      // For lasso trials, check:
+      // 1. Cursor cannot move over gray (distractor) icons
+      // 2. Cursor cannot move within 2/3 radius of yellow (target) icons
+      const collisionResult = checkLassoGrayIconCollision(x, y, lassoConfig);
+      if (collisionResult.isExcursion) {
+        // Mark the collision
+        if (!hasExcursionMarker) {
+          setExcursionMarkers([collisionResult.boundaryPoint]);
+          setHasExcursionMarker(true);
+        }
+        
+        // Record collision event
+        const collision = {
+          position: { x, y },
+          distanceOutside: collisionResult.distanceOutside,
+          timestamp: currentTime,
+          boundaryPoint: collisionResult.boundaryPoint
+        };
+        setExcursionEvents(prev => [...prev, collision]);
+        
+        // Fail the trial immediately when violating constraints
+        setTrialState(TrialState.FAILED);
+        return; // Don't continue processing this movement
+      }
+    } else if (shouldMarkBoundaries()) {
+      // For non-lasso trials, check tunnel boundary excursions
       const excursionResult = checkTunnelExcursions(x, y, tunnelPath, tunnelType, tunnelWidth, segmentWidths);
       if (excursionResult.isExcursion && !hasExcursionMarker) {
         // Add marker at boundary location (only once per trial)
@@ -158,7 +185,9 @@ export const useMouseHandler = ({
     setHasExcursionMarker,
     setTrialState,
     onTrialComplete,
-    scale
+    scale,
+    lassoConfig,
+    tunnelType
   ]);
 
   return { handleMouseClick, handleMouseMove, lastTimeRef };

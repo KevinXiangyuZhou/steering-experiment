@@ -118,3 +118,70 @@ export const checkTunnelExcursions = (x, y, tunnelPath, tunnelType, tunnelWidth,
   return { isExcursion: false };
 };
 
+/**
+ * Check for collisions in lasso selection tasks:
+ * 1. Cursor cannot move over gray (distractor) icons
+ * 2. Cursor cannot move within 2/3 radius of yellow (target) icons
+ * @param {number} x - Cursor x position
+ * @param {number} y - Cursor y position
+ * @param {Object} lassoConfig - Lasso configuration with grid_layout, icon_radius, icon_spacing, grid_origin
+ * @returns {Object} Object with isExcursion boolean indicating if cursor violates constraints
+ */
+export const checkLassoGrayIconCollision = (x, y, lassoConfig) => {
+  if (!lassoConfig || !lassoConfig.grid_layout) {
+    return { isExcursion: false };
+  }
+
+  const { grid_layout, icon_radius, icon_spacing, grid_origin } = lassoConfig;
+  const [originX, originY] = grid_origin;
+  
+  // Threshold for yellow icons: cursor must stay outside 2/3 of the icon radius
+  const yellowThresholdDistance = icon_radius * (2 / 3);
+
+  // Check each grid cell
+  for (let row = 0; row < grid_layout.length; row++) {
+    const cells = grid_layout[row].split(/\s+/).filter(c => c.length > 0);
+    for (let col = 0; col < cells.length; col++) {
+      const cellType = cells[col];
+      const cellX = originX + col * icon_spacing;
+      const cellY = originY + row * icon_spacing;
+      
+      // Check distance from cursor to icon center
+      const dx = x - cellX;
+      const dy = y - cellY;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      
+      // Check 1: Cannot move over gray (distractor) icons
+      if (cellType === '.' || cellType === ' ') {
+        // Check if cursor is inside the gray icon (within icon_radius)
+        if (distance <= icon_radius) {
+          return {
+            isExcursion: true,
+            boundaryPoint: { x: cellX, y: cellY },
+            distanceOutside: 0 // Cursor is inside the gray icon
+          };
+        }
+      }
+      
+      // Check 2: Cannot move too close to yellow (target) icons
+      if (cellType === 'X') {
+        // Check if cursor is too close (within 2/3 of icon radius)
+        if (distance <= yellowThresholdDistance) {
+          // Calculate the boundary point (at threshold distance from icon center)
+          const angle = Math.atan2(dy, dx);
+          const boundaryX = cellX + Math.cos(angle) * yellowThresholdDistance;
+          const boundaryY = cellY + Math.sin(angle) * yellowThresholdDistance;
+          
+          return {
+            isExcursion: true,
+            boundaryPoint: { x: boundaryX, y: boundaryY },
+            distanceOutside: yellowThresholdDistance - distance // How far inside the threshold
+          };
+        }
+      }
+    }
+  }
+
+  return { isExcursion: false };
+};
+
