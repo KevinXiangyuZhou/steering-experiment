@@ -509,6 +509,217 @@ export const drawTarget = (ctx, targetPos, scale, customRadius = null) => {
 };
 
 /**
+ * Draw cascading menu with main menu and submenu (macOS style)
+ * @param {CanvasRenderingContext2D} ctx - Canvas context
+ * @param {Object} menuConfig - Configuration object with:
+ *   - mainMenuSize: Number of items in main menu
+ *   - subMenuSize: Number of items in submenu
+ *   - targetMainMenuIndex: Index of target item in main menu (0-indexed)
+ *   - targetSubMenuIndex: Index of target item in submenu (0-indexed)
+ *   - menuItemSize: Size of each menu item (radius)
+ *   - menuItemSpacing: Spacing between menu items
+ *   - mainMenuOrigin: [x, y] origin of main menu (top-left)
+ *   - subMenuOffset: [x, y] offset of submenu relative to main menu item
+ * @param {Object} cursorPos - Current cursor position {x, y}
+ * @param {number} scale - Scale factor for rendering
+ */
+export const drawCascadingMenu = (ctx, menuConfig, cursorPos, scale, menuHasHoveredRef = null) => {
+  if (!menuConfig) return;
+
+  const {
+    mainMenuSize,
+    subMenuSize,
+    targetMainMenuIndex,
+    targetSubMenuIndex,
+    mainMenuWindowSize = [0.08, 0.15],
+    subMenuWindowSize = [0.08, 0.12],
+    mainMenuOrigin = [0.1, 0.1]
+  } = menuConfig;
+
+  const [mainMenuX, mainMenuY] = mainMenuOrigin;
+  const [mainMenuWidth, mainMenuHeight] = mainMenuWindowSize;
+  const [subMenuWidth, subMenuHeight] = subMenuWindowSize;
+
+  // Calculate item dimensions from window size (no gaps between items)
+  const mainMenuItemHeight = mainMenuHeight / mainMenuSize; // Each item takes equal height
+  const subMenuItemHeight = subMenuHeight / subMenuSize; // Each item takes equal height
+
+  // Calculate main menu bounds (rectangular window)
+  const mainMenuLeft = mainMenuX;
+  const mainMenuTop = mainMenuY;
+  const mainMenuRight = mainMenuLeft + mainMenuWidth;
+  const mainMenuBottom = mainMenuTop + mainMenuHeight;
+
+  // Calculate target main menu item position and bounds (no gaps, items fill window)
+  const targetItemTop = mainMenuTop + targetMainMenuIndex * mainMenuItemHeight;
+  const targetItemBottom = targetItemTop + mainMenuItemHeight;
+  const targetItemLeft = mainMenuLeft;
+  const targetItemRight = mainMenuRight;
+  const targetMainMenuY = targetItemTop + mainMenuItemHeight / 2; // Center of target item
+
+  // Check if cursor is hovering over target main menu item (within rectangular bounds)
+  const isHoveringTarget = cursorPos.x >= targetItemLeft && cursorPos.x <= targetItemRight &&
+                           cursorPos.y >= targetItemTop && cursorPos.y <= targetItemBottom;
+  
+  // Track if we've ever hovered over target (to keep submenu visible)
+  if (menuHasHoveredRef) {
+    if (isHoveringTarget) {
+      menuHasHoveredRef.current = true;
+    }
+  }
+  const shouldShowSubmenu = menuHasHoveredRef ? menuHasHoveredRef.current : isHoveringTarget;
+
+  // Draw main menu background (rectangular window - always visible)
+  ctx.save();
+  
+  // Draw shadow (subtle)
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+  ctx.fillRect(
+    (mainMenuLeft + 3) * scale,
+    (mainMenuTop + 3) * scale,
+    mainMenuWidth * scale,
+    mainMenuHeight * scale
+  );
+  
+  // Draw menu background (rectangular, no rounded corners)
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fillRect(mainMenuLeft * scale, mainMenuTop * scale, mainMenuWidth * scale, mainMenuHeight * scale);
+  
+  // Draw border (all four sides)
+  ctx.strokeStyle = '#C0C0C0';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(mainMenuLeft * scale, mainMenuTop * scale, mainMenuWidth * scale, mainMenuHeight * scale);
+
+  // Draw main menu items (no gaps, items fill window)
+  for (let i = 0; i < mainMenuSize; i++) {
+    const itemTop = mainMenuTop + i * mainMenuItemHeight;
+    const itemBottom = itemTop + mainMenuItemHeight;
+    const itemLeft = mainMenuLeft;
+    const itemRight = mainMenuRight;
+    const itemY = itemTop + mainMenuItemHeight / 2; // Center of item
+
+    // Determine if this is the target item
+    const isTarget = i === targetMainMenuIndex;
+    
+    // Check if cursor is hovering over this item
+    const isHovering = cursorPos.x >= itemLeft && cursorPos.x <= itemRight &&
+                       cursorPos.y >= itemTop && cursorPos.y <= itemBottom;
+
+    // Draw menu item background (light red for selected, light grey for hover)
+    if (isTarget || isHovering) {
+      if (isTarget) {
+        // Light red for target item
+        ctx.fillStyle = '#FF6B6B'; // Light red
+      } else {
+        // Light grey for hover
+        ctx.fillStyle = '#E5E5E5';
+      }
+      ctx.fillRect(itemLeft * scale, itemTop * scale, (itemRight - itemLeft) * scale, (itemBottom - itemTop) * scale);
+    }
+
+    // Draw menu item text label
+    const textPadding = mainMenuWidth * 0.1;
+    const textX = itemLeft + textPadding;
+    
+    ctx.fillStyle = (isTarget || isHovering) ? '#FFFFFF' : '#000000'; // White text on red, black otherwise
+    ctx.font = `bold ${8 * scale / 1000}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(`Item ${i + 1}`, textX * scale, itemY * scale);
+
+    // Draw arrow indicator if this is the target item (indicating submenu)
+    if (isTarget) {
+      ctx.fillStyle = (isTarget || isHovering) ? '#FFFFFF' : '#666666';
+      ctx.beginPath();
+      const arrowX = itemRight - textPadding;
+      const arrowSize = 5;
+      ctx.moveTo(arrowX * scale, (itemY - arrowSize) * scale);
+      ctx.lineTo((arrowX + arrowSize) * scale, itemY * scale);
+      ctx.lineTo(arrowX * scale, (itemY + arrowSize) * scale);
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
+
+  // Draw submenu if we've hovered over target main menu item (persistent)
+  if (shouldShowSubmenu) {
+    // Position submenu directly adjacent to main menu (no gap - start exactly at right edge)
+    const subMenuLeft = mainMenuRight; // Start exactly at main menu right edge (no gap)
+    // Align submenu so first item aligns with target main menu item
+    const subMenuTop = targetItemTop; // Align top with target item
+    const subMenuRight = subMenuLeft + subMenuWidth;
+    const subMenuBottom = subMenuTop + subMenuHeight;
+
+    // Draw submenu shadow (subtle, adjacent to main menu)
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+    ctx.fillRect(
+      (subMenuLeft + 3) * scale,
+      (subMenuTop + 3) * scale,
+      subMenuWidth * scale,
+      subMenuHeight * scale
+    );
+
+    // Draw submenu background (rectangular, no rounded corners)
+    // Start exactly at mainMenuRight with no gap
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(subMenuLeft * scale, subMenuTop * scale, subMenuWidth * scale, subMenuHeight * scale);
+    
+    // Draw border (all sides - submenu border will be drawn, main menu right border is already drawn)
+    ctx.strokeStyle = '#C0C0C0';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(subMenuLeft * scale, subMenuTop * scale, subMenuWidth * scale, subMenuHeight * scale);
+    
+    // Redraw main menu right border on top to ensure it's visible (covers submenu left border where they meet)
+    ctx.strokeStyle = '#C0C0C0';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(mainMenuRight * scale, mainMenuTop * scale);
+    ctx.lineTo(mainMenuRight * scale, mainMenuBottom * scale);
+    ctx.stroke();
+
+    // Draw submenu items (no gaps, items fill window)
+    for (let i = 0; i < subMenuSize; i++) {
+      const itemTop = subMenuTop + i * subMenuItemHeight;
+      const itemBottom = itemTop + subMenuItemHeight;
+      const itemLeft = subMenuLeft;
+      const itemRight = subMenuRight;
+      const itemY = itemTop + subMenuItemHeight / 2; // Center of item
+
+      // Determine if this is the target item
+      const isTarget = i === targetSubMenuIndex;
+      
+      // Check if cursor is hovering over this item
+      const isHovering = cursorPos.x >= itemLeft && cursorPos.x <= itemRight &&
+                         cursorPos.y >= itemTop && cursorPos.y <= itemBottom;
+
+      // Draw menu item background (light red for selected, light grey for hover)
+      if (isTarget || isHovering) {
+        if (isTarget) {
+          // Light red for target item
+          ctx.fillStyle = '#FF6B6B'; // Light red
+        } else {
+          // Light grey for hover
+          ctx.fillStyle = '#E5E5E5';
+        }
+        ctx.fillRect(itemLeft * scale, itemTop * scale, (itemRight - itemLeft) * scale, (itemBottom - itemTop) * scale);
+      }
+
+      // Draw menu item text label
+      const textPadding = subMenuWidth * 0.1;
+      const textX = itemLeft + textPadding;
+      
+      ctx.fillStyle = (isTarget || isHovering) ? '#FFFFFF' : '#000000'; // White text on red, black otherwise
+      ctx.font = `bold ${8 * scale / 1000}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(`Sub ${i + 1}`, textX * scale, itemY * scale);
+    }
+  }
+
+  ctx.restore();
+};
+
+/**
  * Draw lasso selection grid with target squares
  * @param {CanvasRenderingContext2D} ctx - Canvas context
  * @param {Object} lassoConfig - Configuration object with:
@@ -571,19 +782,27 @@ export const drawCanvas = (
   canvasWidth,
   canvasHeight,
   scale,
-  lassoConfig = null
+  lassoConfig = null,
+  menuConfig = null,
+  menuHasHoveredRef = null
 ) => {
   ctx.clearRect(0, 0, canvasWidth, canvasHeight);
   
-  // Draw lasso grid first (if lasso tunnel type)
+  // Draw tunnel first (skip for lasso and cascading menu trials)
+  // Draw tunnel BEFORE menu/grid/buttons so they appear on top
+  if (tunnelPath.length > 0 && tunnelType !== 'lasso' && tunnelType !== 'cascading_menu') {
+    drawTunnel(ctx, tunnelPath, tunnelType, tunnelWidth, segmentWidths, scale);
+  }
+  
+  // Draw lasso grid (if lasso tunnel type)
   if (tunnelType === 'lasso' && lassoConfig) {
     drawLassoGrid(ctx, lassoConfig, scale);
   }
   
-  // Draw tunnel (skip for lasso trials - users draw freely)
-  // Draw tunnel BEFORE buttons so buttons appear on top
-  if (tunnelPath.length > 0 && tunnelType !== 'lasso') {
-    drawTunnel(ctx, tunnelPath, tunnelType, tunnelWidth, segmentWidths, scale);
+  // Draw cascading menu (if cascading menu tunnel type)
+  // Draw menu without tunnel path - menu is the main visual element
+  if (tunnelType === 'cascading_menu' && menuConfig) {
+    drawCascadingMenu(ctx, menuConfig, cursorPos, scale, menuHasHoveredRef);
   }
   
   // Draw excursion markers
@@ -605,13 +824,20 @@ export const drawCanvas = (
     
     // Draw target
     drawTarget(ctx, targetPos, scale, lassoIconRadius);
+  } else if (tunnelType === 'cascading_menu') {
+    // For cascading menu trials, only draw start button
+    // Target is the red menu item, which is already drawn in the menu
+    if (trialState === 'waiting_for_start') {
+      drawStartButton(ctx, startButtonPos, scale);
+    }
+    // Don't draw target circle - target is the red menu item
   } else {
-    // Draw start button (normal size for non-lasso trials)
+    // Draw start button (normal size for non-lasso, non-menu trials)
     if (trialState === 'waiting_for_start') {
       drawStartButton(ctx, startButtonPos, scale);
     }
     
-    // Draw target (normal size for non-lasso trials)
+    // Draw target (normal size for non-lasso, non-menu trials)
     drawTarget(ctx, targetPos, scale);
   }
   

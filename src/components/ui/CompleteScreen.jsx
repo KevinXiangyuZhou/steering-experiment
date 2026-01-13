@@ -10,7 +10,7 @@ export const CompleteScreen = ({
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
       <div className="bg-white rounded-lg shadow-lg p-12 text-center max-w-md">
-        <h2 className="text-3xl font-bold text-green-600 mb-6 tracking-tight">Experiment Complete!</h2>
+        <h2 className="text-3xl font-bold text-green-600 mb-6 tracking-tight">Study Complete!</h2>
         <p className="mb-6 text-base leading-relaxed text-gray-800">All trials completed successfully!</p>
         
         {/* Upload Status */}

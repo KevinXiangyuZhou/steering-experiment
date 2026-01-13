@@ -120,7 +120,7 @@ export const checkTunnelExcursions = (x, y, tunnelPath, tunnelType, tunnelWidth,
 
 /**
  * Check for collisions in lasso selection tasks:
- * 1. Cursor cannot move over gray (distractor) icons
+ * 1. Cursor cannot move within 2/3 radius of gray (distractor) icons
  * 2. Cursor cannot move within 2/3 radius of yellow (target) icons
  * @param {number} x - Cursor x position
  * @param {number} y - Cursor y position
@@ -135,8 +135,8 @@ export const checkLassoGrayIconCollision = (x, y, lassoConfig) => {
   const { grid_layout, icon_radius, icon_spacing, grid_origin } = lassoConfig;
   const [originX, originY] = grid_origin;
   
-  // Threshold for yellow icons: cursor must stay outside 2/3 of the icon radius
-  const yellowThresholdDistance = icon_radius * (2 / 3);
+  // Threshold for both gray and yellow icons: cursor must stay outside 2/3 of the icon radius
+  const thresholdDistance = icon_radius * (2 / 3);
 
   // Check each grid cell
   for (let row = 0; row < grid_layout.length; row++) {
@@ -151,14 +151,19 @@ export const checkLassoGrayIconCollision = (x, y, lassoConfig) => {
       const dy = y - cellY;
       const distance = Math.sqrt(dx * dx + dy * dy);
       
-      // Check 1: Cannot move over gray (distractor) icons
+      // Check 1: Cannot move too close to gray (distractor) icons
       if (cellType === '.' || cellType === ' ') {
-        // Check if cursor is inside the gray icon (within icon_radius)
-        if (distance <= icon_radius) {
+        // Check if cursor is too close (within 2/3 of icon radius)
+        if (distance <= thresholdDistance) {
+          // Calculate the boundary point (at threshold distance from icon center)
+          const angle = Math.atan2(dy, dx);
+          const boundaryX = cellX + Math.cos(angle) * thresholdDistance;
+          const boundaryY = cellY + Math.sin(angle) * thresholdDistance;
+          
           return {
             isExcursion: true,
-            boundaryPoint: { x: cellX, y: cellY },
-            distanceOutside: 0 // Cursor is inside the gray icon
+            boundaryPoint: { x: boundaryX, y: boundaryY },
+            distanceOutside: thresholdDistance - distance // How far inside the threshold
           };
         }
       }
@@ -166,16 +171,16 @@ export const checkLassoGrayIconCollision = (x, y, lassoConfig) => {
       // Check 2: Cannot move too close to yellow (target) icons
       if (cellType === 'X') {
         // Check if cursor is too close (within 2/3 of icon radius)
-        if (distance <= yellowThresholdDistance) {
+        if (distance <= thresholdDistance) {
           // Calculate the boundary point (at threshold distance from icon center)
           const angle = Math.atan2(dy, dx);
-          const boundaryX = cellX + Math.cos(angle) * yellowThresholdDistance;
-          const boundaryY = cellY + Math.sin(angle) * yellowThresholdDistance;
+          const boundaryX = cellX + Math.cos(angle) * thresholdDistance;
+          const boundaryY = cellY + Math.sin(angle) * thresholdDistance;
           
           return {
             isExcursion: true,
             boundaryPoint: { x: boundaryX, y: boundaryY },
-            distanceOutside: yellowThresholdDistance - distance // How far inside the threshold
+            distanceOutside: thresholdDistance - distance // How far inside the threshold
           };
         }
       }
@@ -183,5 +188,126 @@ export const checkLassoGrayIconCollision = (x, y, lassoConfig) => {
   }
 
   return { isExcursion: false };
+};
+
+/**
+ * Check if cursor is outside the cascading menu windows.
+ * Cursor must stay within either the main menu window or the submenu window (when visible).
+ * @param {number} x - Cursor x position
+ * @param {number} y - Cursor y position
+ * @param {Object} menuConfig - Menu configuration with window sizes and positions
+ * @param {boolean} shouldShowSubmenu - Whether submenu is currently visible
+ * @returns {Object} Object with isExcursion boolean indicating if cursor is outside windows
+ */
+export const checkCascadingMenuExcursion = (x, y, menuConfig, shouldShowSubmenu) => {
+  if (!menuConfig) {
+    return { isExcursion: false };
+  }
+
+  const {
+    mainMenuSize,
+    targetMainMenuIndex,
+    mainMenuWindowSize = [0.08, 0.15],
+    subMenuWindowSize = [0.08, 0.12],
+    mainMenuOrigin = [0.1, 0.1]
+  } = menuConfig;
+
+  const [mainMenuX, mainMenuY] = mainMenuOrigin;
+  const [mainMenuWidth, mainMenuHeight] = mainMenuWindowSize;
+  const [subMenuWidth, subMenuHeight] = subMenuWindowSize;
+
+  // Calculate item dimensions from window size
+  const mainMenuItemHeight = mainMenuHeight / mainMenuSize;
+
+  // Main menu window bounds
+  const mainMenuLeft = mainMenuX;
+  const mainMenuTop = mainMenuY;
+  const mainMenuRight = mainMenuLeft + mainMenuWidth;
+  const mainMenuBottom = mainMenuTop + mainMenuHeight;
+
+  // Check if cursor is within main menu window
+  const isInMainMenu = x >= mainMenuLeft && x <= mainMenuRight &&
+                       y >= mainMenuTop && y <= mainMenuBottom;
+
+  // If cursor is in main menu, no excursion
+  if (isInMainMenu) {
+    return { isExcursion: false };
+  }
+
+  // If submenu is visible, check if cursor is within submenu window
+  if (shouldShowSubmenu) {
+    const targetItemTop = mainMenuTop + targetMainMenuIndex * mainMenuItemHeight;
+    const subMenuLeft = mainMenuRight; // Adjacent to main menu
+    const subMenuTop = targetItemTop; // Aligned with target item
+    const subMenuRight = subMenuLeft + subMenuWidth;
+    const subMenuBottom = subMenuTop + subMenuHeight;
+
+    const isInSubMenu = x >= subMenuLeft && x <= subMenuRight &&
+                        y >= subMenuTop && y <= subMenuBottom;
+
+    if (isInSubMenu) {
+      return { isExcursion: false };
+    }
+  }
+
+  // Cursor is outside both windows - this is an excursion
+  // Calculate the closest point on the window boundary
+  let closestX, closestY;
+  
+  if (shouldShowSubmenu) {
+    const targetItemTop = mainMenuTop + targetMainMenuIndex * mainMenuItemHeight;
+    const subMenuLeft = mainMenuRight;
+    const subMenuTop = targetItemTop;
+    const subMenuRight = subMenuLeft + subMenuWidth;
+    const subMenuBottom = subMenuTop + subMenuHeight;
+
+    // Find closest point on either main menu or submenu boundary
+    // Calculate distance to main menu boundaries
+    let mainDistX = Math.min(Math.abs(x - mainMenuLeft), Math.abs(x - mainMenuRight));
+    let mainDistY = Math.min(Math.abs(y - mainMenuTop), Math.abs(y - mainMenuBottom));
+    let mainDist = Math.min(mainDistX, mainDistY);
+    
+    // Calculate distance to submenu boundaries
+    let subDistX = Math.min(Math.abs(x - subMenuLeft), Math.abs(x - subMenuRight));
+    let subDistY = Math.min(Math.abs(y - subMenuTop), Math.abs(y - subMenuBottom));
+    let subDist = Math.min(subDistX, subDistY);
+
+    if (mainDist < subDist) {
+      // Closer to main menu
+      if (x < mainMenuLeft) closestX = mainMenuLeft;
+      else if (x > mainMenuRight) closestX = mainMenuRight;
+      else closestX = x;
+      
+      if (y < mainMenuTop) closestY = mainMenuTop;
+      else if (y > mainMenuBottom) closestY = mainMenuBottom;
+      else closestY = y;
+    } else {
+      // Closer to submenu
+      if (x < subMenuLeft) closestX = subMenuLeft;
+      else if (x > subMenuRight) closestX = subMenuRight;
+      else closestX = x;
+      
+      if (y < subMenuTop) closestY = subMenuTop;
+      else if (y > subMenuBottom) closestY = subMenuBottom;
+      else closestY = y;
+    }
+  } else {
+    // Only main menu exists
+    if (x < mainMenuLeft) closestX = mainMenuLeft;
+    else if (x > mainMenuRight) closestX = mainMenuRight;
+    else closestX = x;
+    
+    if (y < mainMenuTop) closestY = mainMenuTop;
+    else if (y > mainMenuBottom) closestY = mainMenuBottom;
+    else closestY = y;
+  }
+
+  const distanceOutside = Math.sqrt((x - closestX) ** 2 + (y - closestY) ** 2);
+
+  return {
+    isExcursion: true,
+    boundaryPoint: { x: closestX, y: closestY },
+    distanceOutside: distanceOutside
+  };
 };
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { ExperimentPhase, TrialState, BASIC_CONDITIONS, BASIC_TRIAL_REPETITIONS, LASSO_TRIAL_REPETITIONS } from './constants/experimentConstants.js';
+import { ExperimentPhase, TrialState, BASIC_CONDITIONS, BASIC_TRIAL_REPETITIONS, LASSO_TRIAL_REPETITIONS, CASCADING_MENU_TRIAL_REPETITIONS, CASCADING_MENU_CONDITIONS } from './constants/experimentConstants.js';
 import { getUrlParameters } from './utils/urlUtils.js';
-import { generateTunnelPath, generateSequentialTunnelPath, generateCornerPath, generateLassoPath } from './utils/tunnelGenerator.js';
+import { generateTunnelPath, generateSequentialTunnelPath, generateCornerPath, generateLassoPath, generateCascadingMenuPath } from './utils/tunnelGenerator.js';
 import { downloadData, uploadData } from './utils/dataManager.js';
 import { advanceTrial } from './utils/trialAdvancement.js';
 import { drawCanvas } from './components/canvas/DrawingFunctions.js';
@@ -12,6 +12,7 @@ import { WelcomeScreen } from './components/ui/WelcomeScreen.jsx';
 import { EnvironmentSetup } from './components/ui/EnvironmentSetup.jsx';
 import { Instructions } from './components/ui/Instructions.jsx';
 import { LassoInstructions } from './components/ui/LassoInstructions.jsx';
+import { CascadingMenuInstructions } from './components/ui/CascadingMenuInstructions.jsx';
 import { TimeConstraintIntro } from './components/ui/TimeConstraintIntro.jsx';
 import { CompleteScreen } from './components/ui/CompleteScreen.jsx';
 import { TrialCanvas } from './components/ui/TrialCanvas.jsx';
@@ -74,6 +75,8 @@ const HumanSteeringExperiment = () => {
   const [tunnelType, setTunnelType] = useState('curved');
   const [segmentWidths, setSegmentWidths] = useState([0.015, 0.025, 0.015]);
   const [lassoConfig, setLassoConfig] = useState(null); // Store lasso grid configuration
+  const [menuConfig, setMenuConfig] = useState(null); // Store cascading menu configuration
+  const menuHasHoveredRef = useRef(false); // Track if we've hovered over target item (persistent submenu)
   const [targetPos, setTargetPos] = useState({ x: 0, y: 0 });
   const [startButtonPos, setStartButtonPos] = useState({ x: 0, y: 0 });
 
@@ -84,15 +87,15 @@ const HumanSteeringExperiment = () => {
   const [failedDueToTimeout, setFailedDueToTimeout] = useState(false);
 
   // Check if current phase should enforce boundary constraints
-  // Note: Lasso trials don't enforce boundaries - users draw freely
+  // Note: Lasso and cascading menu trials don't enforce boundaries - users move freely
   const shouldEnforceBoundaries = useCallback(() => {
-    return (phase === ExperimentPhase.PRACTICE || phase === ExperimentPhase.MAIN_TRIALS || phase === ExperimentPhase.SEQUENTIAL_TRIALS) && tunnelType !== 'lasso';
+    return (phase === ExperimentPhase.PRACTICE || phase === ExperimentPhase.MAIN_TRIALS || phase === ExperimentPhase.SEQUENTIAL_TRIALS) && tunnelType !== 'lasso' && tunnelType !== 'cascading_menu';
   }, [phase, tunnelType]);
 
   // Check if current phase should mark boundary violations
-  // Note: Lasso trials don't mark boundaries - users draw freely
+  // Note: Lasso and cascading menu trials don't mark boundaries - users move freely
   const shouldMarkBoundaries = useCallback(() => {
-    return (phase === ExperimentPhase.PRACTICE || phase === ExperimentPhase.MAIN_TRIALS || phase === ExperimentPhase.SEQUENTIAL_TRIALS) && tunnelType !== 'lasso';
+    return (phase === ExperimentPhase.PRACTICE || phase === ExperimentPhase.MAIN_TRIALS || phase === ExperimentPhase.SEQUENTIAL_TRIALS) && tunnelType !== 'lasso' && tunnelType !== 'cascading_menu';
   }, [phase, tunnelType]);
 
   // Calculate canvas dimensions on mount and window resize
@@ -155,11 +158,35 @@ const HumanSteeringExperiment = () => {
         icon_spacing: condition.icon_spacing || 0.05,
         grid_origin: condition.grid_origin || [0.1, 0.1]
       });
+      setMenuConfig(null); // Clear menu config
       // For lasso trials, use computed start/end positions from grid
       setStartButtonPos(lassoStartPos);
       setTargetPos(lassoEndPos);
       setCursorPos(lassoStartPos);
       cursorPosRef.current = lassoStartPos;
+    } else if (condition.tunnelType === 'cascading_menu') {
+      const [generatedPath, width, menuStartPos, menuEndPos] = generateCascadingMenuPath(condition, 0.002);
+      path = generatedPath;
+      setTunnelType('cascading_menu');
+      setTunnelWidth(width);
+      // Store menu-specific data for rendering
+      setMenuConfig({
+        mainMenuSize: condition.mainMenuSize,
+        subMenuSize: condition.subMenuSize,
+        targetMainMenuIndex: condition.targetMainMenuIndex,
+        targetSubMenuIndex: condition.targetSubMenuIndex,
+        mainMenuWindowSize: condition.mainMenuWindowSize || [0.08, 0.15],
+        subMenuWindowSize: condition.subMenuWindowSize || [0.08, 0.12],
+        mainMenuOrigin: condition.mainMenuOrigin || [0.1, 0.1]
+      });
+      setLassoConfig(null); // Clear lasso config
+      // Reset hover state for new trial
+      menuHasHoveredRef.current = false;
+      // For cascading menu trials, use computed start/end positions
+      setStartButtonPos(menuStartPos);
+      setTargetPos(menuEndPos);
+      setCursorPos(menuStartPos);
+      cursorPosRef.current = menuStartPos;
     } else {
       const [generatedPath, width] = generateTunnelPath(
         condition.tunnelWidth,
@@ -168,8 +195,9 @@ const HumanSteeringExperiment = () => {
       path = generatedPath;
       setTunnelType('curved');
       setTunnelWidth(width);
-      // Clear lasso config when switching to non-lasso trials
+      // Clear lasso and menu config when switching to non-special trials
       setLassoConfig(null);
+      setMenuConfig(null);
     }
     setTunnelPath(path);
     setTimeLimit(condition.timeLimit);
@@ -268,6 +296,8 @@ const HumanSteeringExperiment = () => {
     // Determine repetition count based on trial type
     const repetitions = currentCondition.tunnelType === 'lasso' 
       ? LASSO_TRIAL_REPETITIONS 
+      : currentCondition.tunnelType === 'cascading_menu'
+      ? CASCADING_MENU_TRIAL_REPETITIONS
       : BASIC_TRIAL_REPETITIONS;
     
     if (currentRepetition < repetitions) {
@@ -352,7 +382,9 @@ const HumanSteeringExperiment = () => {
     onTrialComplete: completeTrial,
     onStartTrial: startTrialMovement,
     scale: canvasDimensions?.scale || 1000,
-    lassoConfig
+    lassoConfig,
+    menuConfig,
+    menuHasHoveredRef
   });
 
   // Time-based sampling of cursor position (every 0.01s = 100Hz)
@@ -414,7 +446,9 @@ const HumanSteeringExperiment = () => {
         canvasDimensions.width,
         canvasDimensions.height,
         canvasDimensions.scale,
-        lassoConfig
+        lassoConfig,
+        menuConfig,
+        menuHasHoveredRef
       );
       animationRef.current = requestAnimationFrame(animate);
     };
@@ -425,7 +459,7 @@ const HumanSteeringExperiment = () => {
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [cursorPos, trialState, tunnelPath, startButtonPos, targetPos, tunnelWidth, excursionMarkers, shouldMarkBoundaries, hasExcursionMarker, tunnelType, segmentWidths, canvasDimensions, lassoConfig]);
+  }, [cursorPos, trialState, tunnelPath, startButtonPos, targetPos, tunnelWidth, excursionMarkers, shouldMarkBoundaries, hasExcursionMarker, tunnelType, segmentWidths, canvasDimensions, lassoConfig, menuConfig]);
 
   const handleUploadData = async () => {
     setUploadStatus('uploading');
@@ -469,6 +503,9 @@ const HumanSteeringExperiment = () => {
     } else if (phase === ExperimentPhase.LASSO_TRIALS && currentTrial < currentConditions.length) {
       statusText = `Lasso Trial ${currentTrial + 1}/${currentConditions.length}`;
       statusColor = "text-orange-600";
+    } else if (phase === ExperimentPhase.CASCADING_MENU_TRIALS && currentTrial < currentConditions.length) {
+      statusText = `Cascading Menu Trial ${currentTrial + 1}/${currentConditions.length}`;
+      statusColor = "text-purple-600";
     } else if (phase === ExperimentPhase.SEQUENTIAL_TRIALS && currentTrial < currentConditions.length) {
       statusText = `Trial ${getNormalTrialNumber(phase, currentTrial)}/${getNormalTotalTrials()}`;
       statusColor = "text-indigo-600";
@@ -489,6 +526,8 @@ const HumanSteeringExperiment = () => {
     } else if (trialState === TrialState.IN_PROGRESS) {
       if (phase === ExperimentPhase.LASSO_TRIALS) {
         stateText = "Draw a loop around all yellow targets";
+      } else if (phase === ExperimentPhase.CASCADING_MENU_TRIALS) {
+        stateText = "Navigate through menu: move to yellow item, then select red submenu item";
       } else {
         stateText = "Navigate to the red target";
       }
@@ -545,6 +584,9 @@ const HumanSteeringExperiment = () => {
       case ExperimentPhase.LASSO_INSTRUCTIONS:
         return <LassoInstructions />;
       
+      case ExperimentPhase.CASCADING_MENU_INSTRUCTIONS:
+        return <CascadingMenuInstructions />;
+      
       case ExperimentPhase.TIME_CONSTRAINT_INTRO:
         return <TimeConstraintIntro />;
       
@@ -564,6 +606,8 @@ const HumanSteeringExperiment = () => {
         const currentCondition = currentConditions[currentTrial];
         const totalRepetitions = currentCondition && currentCondition.tunnelType === 'lasso'
           ? LASSO_TRIAL_REPETITIONS
+          : currentCondition && currentCondition.tunnelType === 'cascading_menu'
+          ? CASCADING_MENU_TRIAL_REPETITIONS
           : BASIC_TRIAL_REPETITIONS;
         
         return (

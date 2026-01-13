@@ -8,6 +8,8 @@ export const ExperimentPhase = {
   MAIN_TRIALS: 'main_trials',
   LASSO_INSTRUCTIONS: 'lasso_instructions',
   LASSO_TRIALS: 'lasso_trials',
+  CASCADING_MENU_INSTRUCTIONS: 'cascading_menu_instructions',
+  CASCADING_MENU_TRIALS: 'cascading_menu_trials',
   SEQUENTIAL_TRIALS: 'sequential_trials',
   TIME_CONSTRAINT_INTRO: 'time_constraint_intro',
   TIME_TRIAL_PRACTICE: 'time_trial_practice',
@@ -27,7 +29,7 @@ export const TrialState = {
 // Trial conditions
 export const BASIC_CONDITIONS = [
   { id: 1, tunnelWidth: 0.02, curvature: 0.025, timeLimit: null, description: "narrow tunnel, gentle curve" },
-  // { id: 2, tunnelWidth: 0.04, curvature: 0.025, timeLimit: null, description: "narrow tunnel, sharp curve" },
+  { id: 2, tunnelWidth: 0.04, curvature: 0.025, timeLimit: null, description: "narrow tunnel, sharp curve" },
   // { id: 3, tunnelType: 'corner', tunnelWidth: 0.02, numCorners: 2, cornerOffset: 0.1, timeLimit: null, description: "narrow tunnel, 2 corners" },
   // { id: 4, tunnelType: 'corner', tunnelWidth: 0.04, numCorners: 2, cornerOffset: 0.1, timeLimit: null, description: "narrow tunnel, 3 corners" },
   // { id: 7, tunnelType: 'corner', tunnelWidth: 0.05, numCorners: 2, cornerOffset: 0.05, timeLimit: null, description: "wide tunnel, 2 corners" },
@@ -97,6 +99,38 @@ export const LASSO_CONDITIONS = [
       ". . . . . . . . .",
       ". X X . . . . . .",
       ". X X X X X X X .",
+      ". X X X X X X X .",
+      ". . . . . . . . ."
+    ],
+    icon_radius: 0.01,
+    icon_spacing: 0.0375,
+    grid_origin: [0.1, 0.05],
+    timeLimit: null,
+    description: "L-shaped target cluster, medium spacing"
+  },
+  {
+    id: 103,
+    tunnelType: 'lasso',
+    grid_layout: [
+      ". . . . . . . . .",
+      ". X X . . . . . .",
+      ". X X X X X X X .",
+      ". X X X X X X X .",
+      ". . . . . . . . ."
+    ],
+    icon_radius: 0.005,
+    icon_spacing: 0.04,
+    grid_origin: [0.1, 0.05],
+    timeLimit: null,
+    description: "L-shaped target cluster, medium spacing"
+  },
+  {
+    id: 104,
+    tunnelType: 'lasso',
+    grid_layout: [
+      ". . . . . . . . .",
+      ". X X . . . . . .",
+      ". X X X X X X X .",
       ". X X X X X X X ."
     ],
     icon_radius: 0.015,
@@ -106,7 +140,7 @@ export const LASSO_CONDITIONS = [
     description: "L-shaped target cluster, medium spacing"
   },
   {
-    id: 103,
+    id: 105,
     tunnelType: 'lasso',
     grid_layout: [
       "O O O O O O O O O",
@@ -123,6 +157,88 @@ export const LASSO_CONDITIONS = [
   
 ];
 
+// Cascading menu trial conditions
+export const CASCADING_MENU_CONDITIONS = [
+  {
+    id: 201,
+    tunnelType: 'cascading_menu',
+    mainMenuSize: 12,
+    subMenuSize: 12,
+    targetMainMenuIndex: 11, // 0-indexed, so this is the 3rd item
+    targetSubMenuIndex: 11, // 0-indexed, so this is the 2nd item in submenu
+    mainMenuWindowSize: [0.12, 0.12], // [width, height] of main menu window
+    subMenuWindowSize: [0.1, 0.12], // [width, height] of submenu window
+    mainMenuOrigin: [0.1, 0.02], // Origin of main menu (top-left corner)
+    timeLimit: null,
+    description: "5-item main menu, 4-item submenu, target at main[2] sub[1]"
+  },
+  {
+    id: 202,
+    tunnelType: 'cascading_menu',
+    mainMenuSize: 12,
+    subMenuSize: 12,
+    targetMainMenuIndex: 5, // 0-indexed, so this is the 3rd item
+    targetSubMenuIndex: 5, // 0-indexed, so this is the 2nd item in submenu
+    mainMenuWindowSize: [0.12, 0.12], // [width, height] of main menu window
+    subMenuWindowSize: [0.1, 0.12], // [width, height] of submenu window
+    mainMenuOrigin: [0.1, 0.02], // Origin of main menu (top-left corner)
+    timeLimit: null,
+    description: "5-item main menu, 4-item submenu, target at main[2] sub[1]"
+  },
+  {
+    id: 203,
+    tunnelType: 'cascading_menu',
+    mainMenuSize:8,
+    subMenuSize: 8,
+    targetMainMenuIndex: 7, // 0-indexed, so this is the 3rd item
+    targetSubMenuIndex: 7, // 0-indexed, so this is the 2nd item in submenu
+    mainMenuWindowSize: [0.12, 0.12], // [width, height] of main menu window
+    subMenuWindowSize: [0.12, 0.12], // [width, height] of submenu window
+    mainMenuOrigin: [0.1, 0.01], // Origin of main menu (top-left corner)
+    timeLimit: null,
+    description: "5-item main menu, 4-item submenu, target at main[2] sub[1]"
+  },
+  {
+    id: 204,
+    tunnelType: 'cascading_menu',
+    mainMenuSize:8,
+    subMenuSize: 8,
+    targetMainMenuIndex: 3, // 0-indexed, so this is the 3rd item
+    targetSubMenuIndex: 3, // 0-indexed, so this is the 2nd item in submenu
+    mainMenuWindowSize: [0.12, 0.12], // [width, height] of main menu window
+    subMenuWindowSize: [0.12, 0.12], // [width, height] of submenu window
+    mainMenuOrigin: [0.1, 0.01], // Origin of main menu (top-left corner)
+    timeLimit: null,
+    description: "5-item main menu, 4-item submenu, target at main[2] sub[1]"
+  },
+  {
+    id: 205,
+    tunnelType: 'cascading_menu',
+    mainMenuSize: 4,
+    subMenuSize: 4,
+    targetMainMenuIndex: 3, // 0-indexed, so this is the 3rd item
+    targetSubMenuIndex: 3, // 0-indexed, so this is the 2nd item in submenu
+    mainMenuWindowSize: [0.12, 0.12], // [width, height] of main menu window
+    subMenuWindowSize: [0.12, 0.12], // [width, height] of submenu window
+    mainMenuOrigin: [0.1, 0.02], // Origin of main menu (top-left corner)
+    timeLimit: null,
+    description: "5-item main menu, 4-item submenu, target at main[2] sub[1]"
+  },
+  {
+    id: 206,
+    tunnelType: 'cascading_menu',
+    mainMenuSize: 4,
+    subMenuSize: 4,
+    targetMainMenuIndex: 1, // 0-indexed, so this is the 3rd item
+    targetSubMenuIndex: 1, // 0-indexed, so this is the 2nd item in submenu
+    mainMenuWindowSize: [0.12, 0.12], // [width, height] of main menu window
+    subMenuWindowSize: [0.12, 0.12], // [width, height] of submenu window
+    mainMenuOrigin: [0.1, 0.02], // Origin of main menu (top-left corner)
+    timeLimit: null,
+    description: "5-item main menu, 4-item submenu, target at main[2] sub[1]"
+  },
+];
+
 // Temporary empty arrays to prevent import errors
 export const TIME_CONDITIONS = [];
 export const SEQUENTIAL_CONDITIONS = [];
@@ -137,6 +253,7 @@ export const SCALE = 1000;
 export const START_BUTTON_RADIUS = 0.008;
 export const TARGET_RADIUS = 0.01;
 export const TUNNEL_STEP = 0.001;
-export const BASIC_TRIAL_REPETITIONS = 1; // Number of times to repeat each basic condition trial
-export const LASSO_TRIAL_REPETITIONS = 1; // Number of times to repeat each lasso trial
+export const BASIC_TRIAL_REPETITIONS = 5; // Number of times to repeat each basic condition trial
+export const LASSO_TRIAL_REPETITIONS = 2; // Number of times to repeat each lasso trial
+export const CASCADING_MENU_TRIAL_REPETITIONS = 2; // Number of times to repeat each cascading menu trial
 

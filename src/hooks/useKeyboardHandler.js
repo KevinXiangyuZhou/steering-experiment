@@ -5,7 +5,8 @@ import {
   SEQUENTIAL_CONDITIONS, 
   TIME_CONDITIONS, 
   SEQUENTIAL_TIME_CONDITIONS,
-  LASSO_CONDITIONS
+  LASSO_CONDITIONS,
+  CASCADING_MENU_CONDITIONS
 } from '../constants/experimentConstants.js';
 import { generateConditionKey } from '../utils/trialManager.js';
 
@@ -81,6 +82,23 @@ export const useKeyboardHandler = ({
           break;
         
         case ExperimentPhase.LASSO_TRIALS:
+          if (event.key === 'r') {
+            setupTrial(currentConditions[currentTrial], false); // Don't reset repetition when restarting
+          }
+          break;
+        
+        case ExperimentPhase.CASCADING_MENU_INSTRUCTIONS:
+          if (event.key === ' ') {
+            // Start cascading menu trials
+            setPhase(ExperimentPhase.CASCADING_MENU_TRIALS);
+            setCurrentTrial(0);
+            setCurrentConditions([...CASCADING_MENU_CONDITIONS]);
+            setIsPractice(false);
+            setupTrial(CASCADING_MENU_CONDITIONS[0]);
+          }
+          break;
+        
+        case ExperimentPhase.CASCADING_MENU_TRIALS:
           if (event.key === 'r') {
             setupTrial(currentConditions[currentTrial], false); // Don't reset repetition when restarting
           }

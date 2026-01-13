@@ -1,7 +1,7 @@
 import { useRef, useCallback } from 'react';
 import { TrialState, START_BUTTON_RADIUS, TARGET_RADIUS } from '../constants/experimentConstants.js';
 import { ExperimentPhase } from '../constants/experimentConstants.js';
-import { checkTunnelExcursions, checkLassoGrayIconCollision } from '../utils/excursionChecker.js';
+import { checkTunnelExcursions, checkLassoGrayIconCollision, checkCascadingMenuExcursion } from '../utils/excursionChecker.js';
 
 export const useMouseHandler = ({
   phase,
@@ -25,7 +25,9 @@ export const useMouseHandler = ({
   onTrialComplete,
   onStartTrial,
   scale,
-  lassoConfig = null
+  lassoConfig = null,
+  menuConfig = null,
+  menuHasHoveredRef = null
 }) => {
   const lastTimeRef = useRef(0);
   const lastMousePosRef = useRef(null);
@@ -36,6 +38,7 @@ export const useMouseHandler = ({
       ExperimentPhase.MAIN_TRIALS, 
       ExperimentPhase.SEQUENTIAL_TRIALS,
       ExperimentPhase.LASSO_TRIALS,
+      ExperimentPhase.CASCADING_MENU_TRIALS,
       ExperimentPhase.TIME_TRIAL_PRACTICE, 
       ExperimentPhase.TIME_TRIALS,
       ExperimentPhase.SEQUENTIAL_TIME_TRIALS
@@ -57,7 +60,7 @@ export const useMouseHandler = ({
     if (distance <= buttonRadius) {
       onStartTrial();
     }
-  }, [phase, trialState, startButtonPos, tunnelType, onStartTrial]);
+  }, [phase, trialState, startButtonPos, tunnelType, onStartTrial, scale]);
 
   const handleMouseMove = useCallback((event) => {
     if (![
@@ -65,6 +68,7 @@ export const useMouseHandler = ({
       ExperimentPhase.MAIN_TRIALS, 
       ExperimentPhase.SEQUENTIAL_TRIALS,
       ExperimentPhase.LASSO_TRIALS,
+      ExperimentPhase.CASCADING_MENU_TRIALS,
       ExperimentPhase.TIME_TRIAL_PRACTICE, 
       ExperimentPhase.TIME_TRIALS,
       ExperimentPhase.SEQUENTIAL_TIME_TRIALS
@@ -99,8 +103,37 @@ export const useMouseHandler = ({
     
     // Note: Position recording is now done via time-based sampling (not on every mouse move)
     
-    // Check for excursions - different logic for lasso vs other trials
-    if (tunnelType === 'lasso' && lassoConfig) {
+    // Check for excursions - different logic for lasso vs cascading menu vs other trials
+    // Note: Cascading menu trials do not enforce boundary constraints - users can move freely
+    if (tunnelType === 'cascading_menu' && menuConfig) {
+      // No excursion checking for cascading menu - cursor can move freely
+      // Just determine if submenu should be visible for rendering
+      const {
+        targetMainMenuIndex,
+        mainMenuWindowSize = [0.08, 0.15],
+        mainMenuOrigin = [0.1, 0.1]
+      } = menuConfig;
+      
+      const [mainMenuX, mainMenuY] = mainMenuOrigin;
+      const [mainMenuWidth, mainMenuHeight] = mainMenuWindowSize;
+      const mainMenuItemHeight = mainMenuHeight / menuConfig.mainMenuSize;
+      
+      const mainMenuLeft = mainMenuX;
+      const mainMenuTop = mainMenuY;
+      const mainMenuRight = mainMenuLeft + mainMenuWidth;
+      const targetItemTop = mainMenuTop + targetMainMenuIndex * mainMenuItemHeight;
+      const targetItemBottom = targetItemTop + mainMenuItemHeight;
+      const targetItemLeft = mainMenuLeft;
+      const targetItemRight = mainMenuRight;
+      
+      const isHoveringMain = x >= targetItemLeft && x <= targetItemRight &&
+                             y >= targetItemTop && y <= targetItemBottom;
+      
+      // Update hover state for submenu visibility (but don't check excursions)
+      if (menuHasHoveredRef && isHoveringMain) {
+        menuHasHoveredRef.current = true;
+      }
+    } else if (tunnelType === 'lasso' && lassoConfig) {
       // For lasso trials, check:
       // 1. Cursor cannot move over gray (distractor) icons
       // 2. Cursor cannot move within 2/3 radius of yellow (target) icons
@@ -153,13 +186,73 @@ export const useMouseHandler = ({
     }
     
     // Check for trial completion
-    const targetDist = Math.sqrt((x - targetPos.x) ** 2 + (y - targetPos.y) ** 2);
-    
-    // Use smaller radius for lasso trials
-    const targetRadius = tunnelType === 'lasso' ? 0.003 : TARGET_RADIUS;
-    
-    if (targetDist < targetRadius) {
-      onTrialComplete(true);
+    if (tunnelType === 'cascading_menu' && menuConfig) {
+      // For cascading menu, check if cursor is within target submenu item
+      // Submenu only appears when hovering over target main menu item
+      const {
+        targetMainMenuIndex,
+        targetSubMenuIndex,
+        mainMenuWindowSize = [0.08, 0.15],
+        subMenuWindowSize = [0.08, 0.12],
+        mainMenuOrigin = [0.1, 0.1]
+      } = menuConfig;
+      
+      const [mainMenuX, mainMenuY] = mainMenuOrigin;
+      const [mainMenuWidth, mainMenuHeight] = mainMenuWindowSize;
+      const [subMenuWidth, subMenuHeight] = subMenuWindowSize;
+      
+      // Calculate item dimensions from window size (no gaps)
+      const mainMenuItemHeight = mainMenuHeight / menuConfig.mainMenuSize;
+      const subMenuItemHeight = subMenuHeight / menuConfig.subMenuSize;
+      
+      // Calculate main menu bounds (rectangular window)
+      const mainMenuLeft = mainMenuX;
+      const mainMenuTop = mainMenuY;
+      const mainMenuRight = mainMenuLeft + mainMenuWidth;
+      
+      // Calculate target main menu item bounds (no gaps)
+      const targetItemTop = mainMenuTop + targetMainMenuIndex * mainMenuItemHeight;
+      const targetItemBottom = targetItemTop + mainMenuItemHeight;
+      const targetItemLeft = mainMenuLeft;
+      const targetItemRight = mainMenuRight;
+      
+      // Check if hovering over target main menu item (rectangular bounds)
+      const isHoveringMain = x >= targetItemLeft && x <= targetItemRight &&
+                             y >= targetItemTop && y <= targetItemBottom;
+      
+      // Track if we've hovered (persistent submenu) - use ref
+      if (menuHasHoveredRef) {
+        if (isHoveringMain) {
+          menuHasHoveredRef.current = true;
+        }
+      }
+      const shouldShowSubmenu = menuHasHoveredRef ? menuHasHoveredRef.current : isHoveringMain;
+      
+      if (shouldShowSubmenu) {
+        // Submenu is visible, positioned adjacent to main menu
+        const subMenuLeft = mainMenuRight; // Start right after main menu
+        const subMenuTop = targetItemTop; // Align with target item
+        const targetSubItemTop = subMenuTop + targetSubMenuIndex * subMenuItemHeight;
+        const targetSubItemBottom = targetSubItemTop + subMenuItemHeight;
+        const targetSubItemLeft = subMenuLeft;
+        const targetSubItemRight = subMenuLeft + subMenuWidth;
+        
+        // Check if cursor is within target submenu item bounds
+        if (x >= targetSubItemLeft && x <= targetSubItemRight &&
+            y >= targetSubItemTop && y <= targetSubItemBottom) {
+          onTrialComplete(true);
+        }
+      }
+    } else {
+      // Standard target completion check
+      const targetDist = Math.sqrt((x - targetPos.x) ** 2 + (y - targetPos.y) ** 2);
+      
+      // Use smaller radius for lasso trials
+      const targetRadius = tunnelType === 'lasso' ? 0.003 : TARGET_RADIUS;
+      
+      if (targetDist < targetRadius) {
+        onTrialComplete(true);
+      }
     }
     
     // Store last position for next calculation
@@ -187,6 +280,7 @@ export const useMouseHandler = ({
     onTrialComplete,
     scale,
     lassoConfig,
+    menuConfig,
     tunnelType
   ]);
 

@@ -24,7 +24,7 @@ export const EnvironmentSetup = () => {
             </div>
             <p className="text-xl font-bold text-gray-900 leading-relaxed bg-yellow-200 px-4 py-3 rounded-md inline-block">
               <b>Please configure your setup correctly for usable data.<br />
-              The step will take approximately 2 minutes.</b>
+              (This part will take approximately 2 minutes.)</b>
             </p>
             
           </div>

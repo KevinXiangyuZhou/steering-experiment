@@ -10,5 +10,12 @@ service cloud.firestore {
       // Allow reads for data analysis (you can restrict this further if needed)
       allow read: if true;
     }
+    
+    // Allow anyone to write to user_study_results collection (for data collection)
+    match /user_study_results/{document} {
+      allow write: if true;
+      // Allow reads for data analysis (you can restrict this further if needed)
+      allow read: if true;
+    }
   }
 }

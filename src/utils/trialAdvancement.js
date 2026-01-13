@@ -2,7 +2,8 @@ import {
   ExperimentPhase,
   SEQUENTIAL_CONDITIONS,
   SEQUENTIAL_TIME_CONDITIONS,
-  LASSO_CONDITIONS
+  LASSO_CONDITIONS,
+  CASCADING_MENU_CONDITIONS
 } from '../constants/experimentConstants.js';
 import { generateConditionKey } from './trialManager.js';
 
@@ -21,14 +22,17 @@ export const advanceTrial = ({
   const nextTrial = currentTrial + 1;
   setCurrentTrial(nextTrial);
   
-  if (nextTrial >= currentConditions.length) {
+    if (nextTrial >= currentConditions.length) {
     if (phase === ExperimentPhase.MAIN_TRIALS) {
       // Transition to lasso instructions after basic trials
       setPhase(ExperimentPhase.LASSO_INSTRUCTIONS);
     } else if (phase === ExperimentPhase.LASSO_TRIALS) {
-      // After lasso trials, go to complete
+      // Transition to cascading menu instructions after lasso trials
+      setPhase(ExperimentPhase.CASCADING_MENU_INSTRUCTIONS);
+    } else if (phase === ExperimentPhase.CASCADING_MENU_TRIALS) {
+      // After cascading menu trials, go to complete
       setPhase(ExperimentPhase.COMPLETE);
-    } 
+    }
     // Temporarily commented out - sequential and time trial phases
     // else if (phase === ExperimentPhase.SEQUENTIAL_TRIALS) {
     //   setPhase(ExperimentPhase.TIME_CONSTRAINT_INTRO);

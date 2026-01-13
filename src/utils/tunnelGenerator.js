@@ -307,3 +307,122 @@ export const generateLassoPath = (condition, stepSize = 0.002) => {
   return [path, margin, startPos, endPos];
 };
 
+/**
+ * Generate a cascading menu path for menu navigation task.
+ * 
+ * Creates a path from the top of the main menu, down to the target main menu item,
+ * then to the target submenu item.
+ * 
+ * @param {Object} condition - Trial condition with cascading menu parameters:
+ *   - mainMenuSize: Number of items in main menu
+ *   - subMenuSize: Number of items in submenu
+ *   - targetMainMenuIndex: Index of target item in main menu (0-indexed)
+ *   - targetSubMenuIndex: Index of target item in submenu (0-indexed)
+ *   - menuItemSize: Size of each menu item (radius)
+ *   - menuItemSpacing: Spacing between menu items
+ *   - mainMenuOrigin: [x, y] origin of main menu (top-left)
+ *   - subMenuOffset: [x, y] offset of submenu relative to main menu item
+ * @param {number} stepSize - Step size along path. Default 0.002.
+ * @returns {Array} Array containing [tunnel_path, width, startPos, endPos] where:
+ *   - tunnel_path is an array of {x, y} objects
+ *   - width is the effective tunnel width
+ *   - startPos is {x, y} start position at top of main menu
+ *   - endPos is {x, y} end position at target submenu item
+ */
+export const generateCascadingMenuPath = (condition, stepSize = 0.002) => {
+  const {
+    mainMenuSize,
+    subMenuSize,
+    targetMainMenuIndex,
+    targetSubMenuIndex,
+    mainMenuWindowSize = [0.08, 0.15],
+    subMenuWindowSize = [0.08, 0.12],
+    mainMenuOrigin = [0.1, 0.1]
+  } = condition;
+
+  const [mainMenuX, mainMenuY] = mainMenuOrigin;
+  const [mainMenuWidth, mainMenuHeight] = mainMenuWindowSize;
+  const [subMenuWidth, subMenuHeight] = subMenuWindowSize;
+
+  // Calculate item dimensions from window size (no gaps)
+  const mainMenuItemHeight = mainMenuHeight / mainMenuSize;
+  const subMenuItemHeight = subMenuHeight / subMenuSize;
+
+  // Calculate main menu bounds (rectangular window)
+  const mainMenuLeft = mainMenuX;
+  const mainMenuTop = mainMenuY;
+  const mainMenuRight = mainMenuLeft + mainMenuWidth;
+  
+  // Calculate positions matching the drawing function
+  // Main menu items are arranged vertically (no gaps)
+  const mainMenuItemX = mainMenuLeft + mainMenuWidth / 2; // Center of menu
+  const mainMenuItemY = (index) => mainMenuTop + index * mainMenuItemHeight + mainMenuItemHeight / 2;
+  
+  // Target main menu item position
+  const targetMainMenuX = mainMenuItemX;
+  const targetMainMenuY = mainMenuItemY(targetMainMenuIndex);
+  const targetItemTop = mainMenuTop + targetMainMenuIndex * mainMenuItemHeight;
+  
+  // Submenu appears to the right of the main menu (adjacent)
+  const subMenuLeft = mainMenuRight; // Start right after main menu
+  const subMenuItemX = subMenuLeft + subMenuWidth / 2; // Center of submenu
+  const subMenuTop = targetItemTop; // Align with target item
+  
+  // Submenu items (no gaps)
+  const subMenuItemY = (index) => subMenuTop + index * subMenuItemHeight + subMenuItemHeight / 2;
+  
+  // Target submenu item position
+  const targetSubMenuX = subMenuItemX;
+  const targetSubMenuY = subMenuItemY(targetSubMenuIndex);
+
+  // Start position: top of main menu (first item center)
+  const startPos = {
+    x: mainMenuItemX,
+    y: mainMenuItemY(0)
+  };
+
+  // End position: target submenu item center
+  const endPos = {
+    x: targetSubMenuX,
+    y: targetSubMenuY
+  };
+
+  // Generate path: start -> target main menu -> target submenu
+  const path = [];
+  
+  // Path segment 1: From start (top of main menu) down to target main menu item
+  const startY = startPos.y;
+  const endY1 = targetMainMenuY;
+  const steps1 = Math.ceil(Math.abs(endY1 - startY) / stepSize);
+  
+  for (let i = 0; i <= steps1; i++) {
+    const t = i / steps1;
+    const y = startY + (endY1 - startY) * t;
+    path.push({ x: mainMenuItemX, y });
+  }
+  
+  // Path segment 2: From target main menu item to target submenu item
+  const startX2 = targetMainMenuX;
+  const startY2 = targetMainMenuY;
+  const endX2 = targetSubMenuX;
+  const endY2 = targetSubMenuY;
+  
+  // Calculate distance for this segment
+  const dx = endX2 - startX2;
+  const dy = endY2 - startY2;
+  const distance = Math.sqrt(dx * dx + dy * dy);
+  const steps2 = Math.ceil(distance / stepSize);
+  
+  for (let i = 1; i <= steps2; i++) {
+    const t = i / steps2;
+    const x = startX2 + dx * t;
+    const y = startY2 + dy * t;
+    path.push({ x, y });
+  }
+
+  // Effective tunnel width: based on menu item height
+  const width = Math.min(mainMenuItemHeight, subMenuItemHeight) * 0.3; // 30% of item height as tunnel width
+
+  return [path, width, startPos, endPos];
+};
+
