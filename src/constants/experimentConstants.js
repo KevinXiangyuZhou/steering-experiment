@@ -30,8 +30,8 @@ export const TrialState = {
 export const BASIC_CONDITIONS = [
   { id: 1, tunnelWidth: 0.02, curvature: 0.025, timeLimit: null, description: "narrow tunnel, gentle curve" },
   { id: 2, tunnelWidth: 0.04, curvature: 0.025, timeLimit: null, description: "narrow tunnel, sharp curve" },
-  // { id: 3, tunnelType: 'corner', tunnelWidth: 0.02, numCorners: 2, cornerOffset: 0.1, timeLimit: null, description: "narrow tunnel, 2 corners" },
-  // { id: 4, tunnelType: 'corner', tunnelWidth: 0.04, numCorners: 2, cornerOffset: 0.1, timeLimit: null, description: "narrow tunnel, 3 corners" },
+  { id: 3, tunnelType: 'corner', tunnelWidth: 0.02, numCorners: 2, cornerOffset: 0.1, timeLimit: null, description: "narrow tunnel, 2 corners" },
+  { id: 4, tunnelType: 'corner', tunnelWidth: 0.04, numCorners: 2, cornerOffset: 0.1, timeLimit: null, description: "narrow tunnel, 3 corners" },
   // { id: 7, tunnelType: 'corner', tunnelWidth: 0.05, numCorners: 2, cornerOffset: 0.05, timeLimit: null, description: "wide tunnel, 2 corners" },
   // { id: 8, tunnelType: 'corner', tunnelWidth: 0.05, numCorners: 3, cornerOffset: 0.05, timeLimit: null, description: "wide tunnel, 3 corners" },
 ];
