@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Download Firebase Data</title>
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+    import { getFirestore, collection, getDocs, query, orderBy } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+    
+    // Firebase configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyDwst-4J5unX773oOfXHfjdOymh02yH_fU",
+      authDomain: "steering-experiment.firebaseapp.com",
+      projectId: "steering-experiment",
+      storageBucket: "steering-experiment.firebasestorage.app",
+      messagingSenderId: "773443415350",
+      appId: "1:773443415350:web:f95e4d189b16ebb76d9797",
+      measurementId: "G-RFZQQVCF7C"
+    };
+    
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    
+    async function downloadAllData() {
+      const statusDiv = document.getElementById('status');
+      const downloadBtn = document.getElementById('downloadBtn');
+      
+      try {
+        statusDiv.textContent = 'Connecting to Firebase...';
+        downloadBtn.disabled = true;
+        
+        const q = query(collection(db, 'user_study_results'), orderBy('uploadedAt', 'desc'));
+        const querySnapshot = await getDocs(q);
+        
+        const allData = [];
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          // Convert Firestore timestamps to ISO strings for JSON serialization
+          if (data.uploadedAt && data.uploadedAt.toDate) {
+            data.uploadedAt = data.uploadedAt.toDate().toISOString();
+          }
+          allData.push({
+            id: doc.id,
+            ...data
+          });
+        });
+        
+        statusDiv.textContent = `Downloaded ${allData.length} documents from user_study_results`;
+        
+        // Create summary
+        const summary = {
+          totalDocuments: allData.length,
+          downloadDate: new Date().toISOString(),
+          participantIds: [...new Set(allData.map(d => d.participantId))],
+          totalTrials: allData.reduce((sum, d) => sum + (d.trialData?.length || 0), 0)
+        };
+        
+        // Download JSON file
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const dataBlob = new Blob([JSON.stringify(allData, null, 2)], { type: 'application/json' });
+        const dataUrl = URL.createObjectURL(dataBlob);
+        const dataLink = document.createElement('a');
+        dataLink.href = dataUrl;
+        dataLink.download = `user_study_results_${timestamp}.json`;
+        dataLink.click();
+        URL.revokeObjectURL(dataUrl);
+        
+        // Download summary
+        const summaryBlob = new Blob([JSON.stringify(summary, null, 2)], { type: 'application/json' });
+        const summaryUrl = URL.createObjectURL(summaryBlob);
+        const summaryLink = document.createElement('a');
+        summaryLink.href = summaryUrl;
+        summaryLink.download = `summary_${timestamp}.json`;
+        summaryLink.click();
+        URL.revokeObjectURL(summaryUrl);
+        
+        // Display summary
+        const summaryDiv = document.getElementById('summary');
+        summaryDiv.innerHTML = `
+          <h3>Summary:</h3>
+          <p>Total participants: ${summary.participantIds.length}</p>
+          <p>Total documents: ${summary.totalDocuments}</p>
+          <p>Total trials: ${summary.totalTrials}</p>
+        `;
+        
+        downloadBtn.disabled = false;
+        statusDiv.textContent = 'Download complete! Files have been downloaded.';
+      } catch (error) {
+        console.error('Error downloading data:', error);
+        statusDiv.textContent = `Error: ${error.message}`;
+        downloadBtn.disabled = false;
+      }
+    }
+    
+    document.getElementById('downloadBtn').addEventListener('click', downloadAllData);
+  </script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+    }
+    button {
+      background-color: #4CAF50;
+      color: white;
+      padding: 15px 32px;
+      text-align: center;
+      text-decoration: none;
+      display: inline-block;
+      font-size: 16px;
+      margin: 4px 2px;
+      cursor: pointer;
+      border: none;
+      border-radius: 4px;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    button:disabled {
+      background-color: #cccccc;
+      cursor: not-allowed;
+    }
+    #status {
+      margin: 20px 0;
+      padding: 10px;
+      background-color: #f0f0f0;
+      border-radius: 4px;
+    }
+    #summary {
+      margin-top: 20px;
+      padding: 15px;
+      background-color: #e8f5e9;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Download Firebase Data</h1>
+  <p>Click the button below to download all data from the <code>user_study_results</code> collection.</p>
+  <button id="downloadBtn">Download All Data</button>
+  <div id="status">Ready to download...</div>
+  <div id="summary"></div>
+</body>
+</html>

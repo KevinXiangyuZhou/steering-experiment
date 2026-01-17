@@ -9,9 +9,9 @@ export const Instructions = () => {
         <ul className="space-y-3 mb-6 text-base leading-relaxed">
           <li>Click the green START button to begin each trial</li>
           <li>Navigate through the tunnel to reach the red target</li>
-          <li>Do <b>NOT</b> stop once you begin the trial</li>
-          <li>Move as smoothly and accurately as possible</li>
-          <li>Press R to restart the current trial at anytime if interrupted</li>
+          <li><b>Keep moving</b> once you clicked start button - do NOT STOP after clicking the start button</li>
+          <li>To keep recorded trace clean, press <b>R</b> to restart if stopped or interrupted</li>
+          <li>Try your best to move smoothly and accurately</li>
         </ul>
         <p className="mb-4 text-base leading-relaxed">You will start with a practice trial to get familiar with the controls and task.</p>
         <p className="font-semibold text-lg text-gray-800">Press <kbd className="bg-gray-200 text-gray-800 px-3 py-1 rounded text-base font-mono font-bold">SPACEBAR</kbd> to start practice</p>

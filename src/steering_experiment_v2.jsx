@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { ExperimentPhase, TrialState, BASIC_CONDITIONS, BASIC_TRIAL_REPETITIONS, LASSO_TRIAL_REPETITIONS, CASCADING_MENU_TRIAL_REPETITIONS, CASCADING_MENU_CONDITIONS } from './constants/experimentConstants.js';
+import { ExperimentPhase, TrialState, BASIC_CONDITIONS, BASIC_TRIAL_REPETITIONS, LASSO_TRIAL_REPETITIONS, CASCADING_MENU_TRIAL_REPETITIONS, CASCADING_MENU_CONDITIONS, TARGET_RADIUS } from './constants/experimentConstants.js';
 import { getUrlParameters } from './utils/urlUtils.js';
 import { generateTunnelPath, generateSequentialTunnelPath, generateCornerPath, generateLassoPath, generateCascadingMenuPath } from './utils/tunnelGenerator.js';
 import { downloadData, uploadData } from './utils/dataManager.js';
@@ -87,15 +87,17 @@ const HumanSteeringExperiment = () => {
   const [failedDueToTimeout, setFailedDueToTimeout] = useState(false);
 
   // Check if current phase should enforce boundary constraints
-  // Note: Lasso and cascading menu trials don't enforce boundaries - users move freely
+  // Note: Lasso trials don't enforce boundaries - users move freely
+  // Cascading menu trials enforce boundaries - cursor must stay within menu windows
   const shouldEnforceBoundaries = useCallback(() => {
-    return (phase === ExperimentPhase.PRACTICE || phase === ExperimentPhase.MAIN_TRIALS || phase === ExperimentPhase.SEQUENTIAL_TRIALS) && tunnelType !== 'lasso' && tunnelType !== 'cascading_menu';
+    return (phase === ExperimentPhase.PRACTICE || phase === ExperimentPhase.MAIN_TRIALS || phase === ExperimentPhase.SEQUENTIAL_TRIALS || phase === ExperimentPhase.CASCADING_MENU_TRIALS) && tunnelType !== 'lasso';
   }, [phase, tunnelType]);
 
   // Check if current phase should mark boundary violations
-  // Note: Lasso and cascading menu trials don't mark boundaries - users move freely
+  // Note: Lasso trials don't mark boundaries - users move freely
+  // Cascading menu trials mark boundaries - cursor must stay within menu windows
   const shouldMarkBoundaries = useCallback(() => {
-    return (phase === ExperimentPhase.PRACTICE || phase === ExperimentPhase.MAIN_TRIALS || phase === ExperimentPhase.SEQUENTIAL_TRIALS) && tunnelType !== 'lasso' && tunnelType !== 'cascading_menu';
+    return (phase === ExperimentPhase.PRACTICE || phase === ExperimentPhase.MAIN_TRIALS || phase === ExperimentPhase.SEQUENTIAL_TRIALS || phase === ExperimentPhase.CASCADING_MENU_TRIALS) && tunnelType !== 'lasso';
   }, [phase, tunnelType]);
 
   // Calculate canvas dimensions on mount and window resize
@@ -279,15 +281,109 @@ const HumanSteeringExperiment = () => {
     // Save data for successful main trials with round number
     const currentCondition = currentConditions[currentTrial];
     const { id, ...condition } = currentCondition;
+    
+    // Ensure the final position is recorded for all trial types
+    let finalTrajectory = [...trajectoryPoints];
+    let finalTimestamps = [...timestampHistory];
+    let finalSpeeds = [...speedHistory];
+    
+    if (success) {
+      // Get the current cursor position
+      const finalPos = cursorPosRef.current;
+      
+      // Check if the final position is different from the last recorded position
+      const lastRecordedPos = trajectoryPoints.length > 0 
+        ? trajectoryPoints[trajectoryPoints.length - 1] 
+        : null;
+      
+      const isDifferent = !lastRecordedPos || 
+        (Math.abs(finalPos.x - lastRecordedPos.x) > 0.0001 || 
+         Math.abs(finalPos.y - lastRecordedPos.y) > 0.0001);
+      
+      // Helper function to add final position to trajectory
+      const addFinalPosition = (isInTarget) => {
+        if (isDifferent) {
+          finalTrajectory.push({ x: finalPos.x, y: finalPos.y });
+          finalTimestamps.push(endTime);
+          
+          // Calculate speed for final point if we have previous position
+          let finalSpeed = 0;
+          if (lastRecordedPos && timestampHistory.length > 0) {
+            const lastTimestamp = timestampHistory[timestampHistory.length - 1];
+            const dt = (endTime - lastTimestamp) / 1000;
+            if (dt > 0) {
+              const dx = finalPos.x - lastRecordedPos.x;
+              const dy = finalPos.y - lastRecordedPos.y;
+              finalSpeed = Math.sqrt((dx / dt) ** 2 + (dy / dt) ** 2);
+            }
+          }
+          finalSpeeds.push(finalSpeed);
+        }
+      };
+      
+      if (currentCondition.tunnelType === 'cascading_menu' && menuConfig) {
+        // Verify the final position is within the target submenu item region
+        const {
+          targetMainMenuIndex,
+          targetSubMenuIndex,
+          mainMenuWindowSize = [0.08, 0.15],
+          subMenuWindowSize = [0.08, 0.12],
+          mainMenuOrigin = [0.1, 0.1]
+        } = menuConfig;
+        
+        const [mainMenuX, mainMenuY] = mainMenuOrigin;
+        const [mainMenuWidth, mainMenuHeight] = mainMenuWindowSize;
+        const [subMenuWidth, subMenuHeight] = subMenuWindowSize;
+        const mainMenuItemHeight = mainMenuHeight / menuConfig.mainMenuSize;
+        const subMenuItemHeight = subMenuHeight / menuConfig.subMenuSize;
+        
+        const mainMenuRight = mainMenuX + mainMenuWidth;
+        const targetItemTop = mainMenuY + targetMainMenuIndex * mainMenuItemHeight;
+        const subMenuLeft = mainMenuRight;
+        const subMenuTop = targetItemTop;
+        const targetSubItemTop = subMenuTop + targetSubMenuIndex * subMenuItemHeight;
+        const targetSubItemBottom = targetSubItemTop + subMenuItemHeight;
+        const targetSubItemLeft = subMenuLeft;
+        const targetSubItemRight = subMenuLeft + subMenuWidth;
+        
+        const isInTargetRegion = finalPos.x >= targetSubItemLeft && finalPos.x <= targetSubItemRight &&
+                                  finalPos.y >= targetSubItemTop && finalPos.y <= targetSubItemBottom;
+        
+        // Always ensure the trajectory ends within the target region
+        // Since completion was triggered, finalPos should be in target region
+        if (isInTargetRegion) {
+          addFinalPosition(true);
+        } else {
+          // Edge case: if final position is not in target region (shouldn't happen),
+          // still add it to capture the actual final position
+          addFinalPosition(false);
+        }
+      } else {
+        // For basic and lasso trials, check if final position is within circular target
+        const targetRadius = currentCondition.tunnelType === 'lasso' ? 0.003 : TARGET_RADIUS;
+        const targetDist = Math.sqrt((finalPos.x - targetPos.x) ** 2 + (finalPos.y - targetPos.y) ** 2);
+        const isInTargetRegion = targetDist < targetRadius;
+        
+        // Always ensure the trajectory ends within the target region
+        if (isInTargetRegion) {
+          addFinalPosition(true);
+        } else {
+          // Edge case: if final position is not in target region (shouldn't happen),
+          // still add it to capture the actual final position
+          addFinalPosition(false);
+        }
+      }
+    }
+    
     const trialResult = {
       participantId,
       completionTime,
       condition,
       trial_id: currentCondition.id,
       round: currentRepetition, // Record which repetition this is (1-indexed)
-      timestamps: [...timestampHistory],
-      trajectory: [...trajectoryPoints],
-      speeds: [...speedHistory]
+      timestamps: finalTimestamps,
+      trajectory: finalTrajectory,
+      speeds: finalSpeeds
     };
     
     setTrialData(prev => [...prev, trialResult]);

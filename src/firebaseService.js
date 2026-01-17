@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getFirestore, collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { getFirestore, collection, addDoc, serverTimestamp, getDocs, query, orderBy } from 'firebase/firestore';
 import firebaseConfig from './firebaseConfig.js';
 
 // Initialize Firebase
@@ -64,4 +64,34 @@ export async function uploadExperimentDataWithRetry(experimentData, maxRetries =
 export function isFirebaseConfigured() {
   return firebaseConfig.apiKey !== "your-api-key-here" && 
          firebaseConfig.projectId !== "your-project-id";
+}
+
+/**
+ * Download all experiment data from Firestore
+ * @returns {Promise<Array>} - Array of all experiment data documents
+ */
+export async function downloadAllExperimentData() {
+  try {
+    const q = query(collection(db, 'user_study_results'), orderBy('uploadedAt', 'desc'));
+    const querySnapshot = await getDocs(q);
+    
+    const allData = [];
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      // Convert Firestore timestamps to ISO strings for JSON serialization
+      if (data.uploadedAt && data.uploadedAt.toDate) {
+        data.uploadedAt = data.uploadedAt.toDate().toISOString();
+      }
+      allData.push({
+        id: doc.id,
+        ...data
+      });
+    });
+    
+    console.log(`Downloaded ${allData.length} documents from user_study_results`);
+    return allData;
+  } catch (error) {
+    console.error('Error downloading data from Firebase:', error);
+    throw error;
+  }
 }

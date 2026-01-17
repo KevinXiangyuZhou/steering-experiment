@@ -38,7 +38,7 @@ export const EnvironmentSetup = () => {
               </div>
               <div className="bg-gray-50 rounded-lg p-5">
                 <p className="text-base text-gray-700 mb-3 leading-relaxed">
-                  <span className="text-green-600">✓</span> This experiment requires you to use a <strong>desktop/laptop</strong> with a <strong>physical mouse</strong> on a flat surface
+                  <span className="text-green-600">✓</span> This experiment requires you to use a <strong>desktop</strong> with a <strong>physical mouse</strong> on a flat surface
                 </p>
                 <p className="text-base text-gray-700 leading-relaxed">
                   <span className="text-red-600">✗</span> DO NOT use trackpad, touchscreen, or drawing tablet

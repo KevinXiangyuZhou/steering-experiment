@@ -11,8 +11,7 @@ export const CascadingMenuInstructions = () => {
           <li>Move your cursor <b>vertically down the main menu</b> to the <b>red target item</b></li>
           <li>When you hover over the red target item, a <b>submenu will appear</b> to the right</li>
           <li>Move your cursor to the <b>red target item in the submenu</b> to complete the trial</li>
-          <li>As before, try moving smoothly and accurately as possible</li>
-          <li>Press <b>R</b> to restart if interrupted</li>
+          <li>As before, try your best to move smoothly and accurately</li>
         </ul>
         <div className="mb-6 p-4 bg-purple-50 border-l-4 border-purple-400">
           <p className="text-base leading-relaxed">

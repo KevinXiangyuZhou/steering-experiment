@@ -2,6 +2,7 @@ import {
   START_BUTTON_RADIUS, 
   TARGET_RADIUS 
 } from '../../constants/experimentConstants.js';
+import { sortTargetsClockwise } from '../../utils/excursionChecker.js';
 
 export const drawTunnel = (ctx, tunnelPath, tunnelType, tunnelWidth, segmentWidths, scale) => {
   // Draw original walls first (gray), then gray rectangles on top, then black outer edges
@@ -735,7 +736,8 @@ export const drawLassoGrid = (ctx, lassoConfig, scale) => {
   const { grid_layout, icon_radius, icon_spacing, grid_origin } = lassoConfig;
   const [originX, originY] = grid_origin;
   
-  // Draw grid squares
+  // Parse grid layout to find target positions
+  const targets = [];
   for (let row = 0; row < grid_layout.length; row++) {
     const cells = grid_layout[row].split(/\s+/).filter(c => c.length > 0);
     for (let col = 0; col < cells.length; col++) {
@@ -748,6 +750,9 @@ export const drawLassoGrid = (ctx, lassoConfig, scale) => {
       const size = icon_radius * 2 * scale;
       
       if (cellType === 'X') {
+        // Store target position for polygon visualization
+        targets.push({ x, y, row, col });
+        
         // Draw target square (yellow)
         ctx.fillStyle = '#FFD700'; // Yellow
         ctx.fillRect(screenX - size/2, screenY - size/2, size, size);
@@ -763,6 +768,47 @@ export const drawLassoGrid = (ctx, lassoConfig, scale) => {
         ctx.strokeRect(screenX - size/2, screenY - size/2, size, size);
       }
       // 'O' cells are invisible, so we don't draw them
+    }
+  }
+  
+  // Draw polygon connecting target centers in clockwise order (visualization)
+  if (targets.length >= 3) {
+    const sortedTargets = sortTargetsClockwise(targets);
+    const polygon = sortedTargets.map(t => ({ x: t.x, y: t.y }));
+    
+    // Draw the polygon outline
+    ctx.strokeStyle = '#FF0000'; // Red color for visibility
+    ctx.lineWidth = 2;
+    ctx.setLineDash([5, 5]); // Dashed line
+    ctx.beginPath();
+    
+    // Draw lines connecting target centers in order
+    for (let i = 0; i < polygon.length; i++) {
+      const point = polygon[i];
+      const screenX = point.x * scale;
+      const screenY = point.y * scale;
+      
+      if (i === 0) {
+        ctx.moveTo(screenX, screenY);
+      } else {
+        ctx.lineTo(screenX, screenY);
+      }
+    }
+    
+    // Close the polygon
+    if (polygon.length > 0) {
+      ctx.closePath();
+    }
+    
+    ctx.stroke();
+    ctx.setLineDash([]); // Reset line dash
+    
+    // Draw small circles at each target center to show connection points
+    ctx.fillStyle = '#FF0000'; // Red
+    for (const point of polygon) {
+      ctx.beginPath();
+      ctx.arc(point.x * scale, point.y * scale, 3, 0, 2 * Math.PI);
+      ctx.fill();
     }
   }
 };
@@ -825,10 +871,11 @@ export const drawCanvas = (
     // Draw target
     drawTarget(ctx, targetPos, scale, lassoIconRadius);
   } else if (tunnelType === 'cascading_menu') {
-    // For cascading menu trials, only draw start button
+    // For cascading menu trials, only draw start button (smaller size)
     // Target is the red menu item, which is already drawn in the menu
+    const menuIconRadius = 0.003; // Same small size as lasso trials
     if (trialState === 'waiting_for_start') {
-      drawStartButton(ctx, startButtonPos, scale);
+      drawStartButton(ctx, startButtonPos, scale, menuIconRadius);
     }
     // Don't draw target circle - target is the red menu item
   } else {

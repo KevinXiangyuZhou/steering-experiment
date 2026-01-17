@@ -9,10 +9,8 @@ export const LassoInstructions = () => {
         <ul className="space-y-3 mb-6 text-base leading-relaxed">
           <li>Click the <b>green START button</b> to begin each trial</li>
           <li>Draw the loop clockwise around the all yellow targets to "select" these targets and then stop at the red dot</li>
-          <li><b>Keep moving</b> once you begin - don't stop</li>
-          <li>Move smoothly and accurately</li>
+          <li>As before, try your best to move smoothly and accurately</li>
           <li>Going too close to the targets or the distractors will cause the trial to fail</li>
-          <li>Press <b>R</b> to restart if interrupted</li>
         </ul>
         <div className="mb-6 p-4 bg-yellow-50 border-l-4 border-yellow-400">
           <p className="text-base leading-relaxed">

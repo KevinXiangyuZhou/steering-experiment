@@ -29,9 +29,9 @@ export const TrialState = {
 // Trial conditions
 export const BASIC_CONDITIONS = [
   { id: 1, tunnelWidth: 0.02, curvature: 0.025, timeLimit: null, description: "narrow tunnel, gentle curve" },
-  { id: 2, tunnelWidth: 0.04, curvature: 0.025, timeLimit: null, description: "narrow tunnel, sharp curve" },
-  { id: 3, tunnelType: 'corner', tunnelWidth: 0.02, numCorners: 2, cornerOffset: 0.1, timeLimit: null, description: "narrow tunnel, 2 corners" },
-  { id: 4, tunnelType: 'corner', tunnelWidth: 0.04, numCorners: 2, cornerOffset: 0.1, timeLimit: null, description: "narrow tunnel, 3 corners" },
+  // { id: 2, tunnelWidth: 0.04, curvature: 0.025, timeLimit: null, description: "narrow tunnel, sharp curve" },
+  // { id: 3, tunnelType: 'corner', tunnelWidth: 0.02, numCorners: 2, cornerOffset: 0.1, timeLimit: null, description: "narrow tunnel, 2 corners" },
+  // { id: 4, tunnelType: 'corner', tunnelWidth: 0.04, numCorners: 2, cornerOffset: 0.1, timeLimit: null, description: "narrow tunnel, 3 corners" },
   // { id: 7, tunnelType: 'corner', tunnelWidth: 0.05, numCorners: 2, cornerOffset: 0.05, timeLimit: null, description: "wide tunnel, 2 corners" },
   // { id: 8, tunnelType: 'corner', tunnelWidth: 0.05, numCorners: 3, cornerOffset: 0.05, timeLimit: null, description: "wide tunnel, 3 corners" },
 ];
@@ -76,84 +76,86 @@ export const BASIC_CONDITIONS = [
 
 // Lasso selection trial conditions
 export const LASSO_CONDITIONS = [
-  {
-    id: 101,
-    tunnelType: 'lasso',
-    grid_layout: [
-      ". . . . . . . . .",
-      ". X X . . . . . .",
-      ". X X X X X X X .",
-      ". X X X X X X X .",
-      ". . . . . . . . ."
-    ],
-    icon_radius: 0.015,
-    icon_spacing: 0.035,
-    grid_origin: [0.1, 0.05],
-    timeLimit: null,
-    description: "L-shaped target cluster, medium spacing"
-  },
-  {
-    id: 102,
-    tunnelType: 'lasso',
-    grid_layout: [
-      ". . . . . . . . .",
-      ". X X . . . . . .",
-      ". X X X X X X X .",
-      ". X X X X X X X .",
-      ". . . . . . . . ."
-    ],
-    icon_radius: 0.01,
-    icon_spacing: 0.0375,
-    grid_origin: [0.1, 0.05],
-    timeLimit: null,
-    description: "L-shaped target cluster, medium spacing"
-  },
-  {
-    id: 103,
-    tunnelType: 'lasso',
-    grid_layout: [
-      ". . . . . . . . .",
-      ". X X . . . . . .",
-      ". X X X X X X X .",
-      ". X X X X X X X .",
-      ". . . . . . . . ."
-    ],
-    icon_radius: 0.005,
-    icon_spacing: 0.04,
-    grid_origin: [0.1, 0.05],
-    timeLimit: null,
-    description: "L-shaped target cluster, medium spacing"
-  },
-  {
-    id: 104,
-    tunnelType: 'lasso',
-    grid_layout: [
-      ". . . . . . . . .",
-      ". X X . . . . . .",
-      ". X X X X X X X .",
-      ". X X X X X X X ."
-    ],
-    icon_radius: 0.015,
-    icon_spacing: 0.035,
-    grid_origin: [0.1, 0.05],
-    timeLimit: null,
-    description: "L-shaped target cluster, medium spacing"
-  },
+  // {
+  //   id: 101,
+  //   tunnelType: 'lasso',
+  //   grid_layout: [
+  //     "O O O O O O O O O",
+  //     "O X X O O O O O O",
+  //     "O X X X X X X X O",
+  //     "O X X X X X X X O",
+  //   ],
+  //   icon_radius: 0.015,
+  //   icon_spacing: 0.035,
+  //   grid_origin: [0.1, 0.05],
+  //   timeLimit: null,
+  //   description: "L-shaped target cluster, medium spacing"
+  // },
+  // {
+  //   id: 102,
+  //   tunnelType: 'lasso',
+  //   grid_layout: [
+  //     ". . . . . . . . .",
+  //     ". X X . . . . . .",
+  //     ". X X X X X X X .",
+  //     ". X X X X X X X ."
+  //   ],
+  //   icon_radius: 0.015,
+  //   icon_spacing: 0.035,
+  //   grid_origin: [0.1, 0.05],
+  //   timeLimit: null,
+  //   description: "L-shaped target cluster, medium spacing"
+  // },
+  // {
+  //   id: 103,
+  //   tunnelType: 'lasso',
+  //   grid_layout: [
+  //     ". . . . . . . . .",
+  //     ". X X . . . . . .",
+  //     ". X X X X X X X .",
+  //     ". X X X X X X X .",
+  //     ". . . . . . . . ."
+  //   ],
+  //   icon_radius: 0.015,
+  //   icon_spacing: 0.035,
+  //   grid_origin: [0.1, 0.05],
+  //   timeLimit: null,
+  //   description: "L-shaped target cluster, medium spacing"
+  // },
+  // {
+  //   id: 104,
+  //   tunnelType: 'lasso',
+  //   grid_layout: [
+  //     ". . . . . . . . .",
+  //     ". X X . . . . . .",
+  //     ". X X X X X X X .",
+  //     ". X X X X X X X .",
+  //     ". . . . . . . . ."
+  //   ],
+  //   icon_radius: 0.013,
+  //   icon_spacing: 0.036,
+  //   grid_origin: [0.1, 0.05],
+  //   timeLimit: null,
+  //   description: "L-shaped target cluster, medium spacing"
+  // },
   {
     id: 105,
     tunnelType: 'lasso',
     grid_layout: [
-      "O O O O O O O O O",
-      "O X X O O O O O O",
-      "O X X X X X X X O",
-      "O X X X X X X X O",
+      ". . . . . . . . .",
+      ". X X . . . . . .",
+      ". X X X X X X X .",
+      ". X X X X X X X .",
+      ". . . . . . . . ."
     ],
-    icon_radius: 0.015,
-    icon_spacing: 0.035,
+    icon_radius: 0.016,
+    icon_spacing: 0.0345,
     grid_origin: [0.1, 0.05],
     timeLimit: null,
     description: "L-shaped target cluster, medium spacing"
   },
+  
+  
   
 ];
 
@@ -164,7 +166,7 @@ export const CASCADING_MENU_CONDITIONS = [
     tunnelType: 'cascading_menu',
     mainMenuSize: 12,
     subMenuSize: 12,
-    targetMainMenuIndex: 11, // 0-indexed, so this is the 3rd item
+    targetMainMenuIndex: 5, // 0-indexed, so this is the 3rd item
     targetSubMenuIndex: 11, // 0-indexed, so this is the 2nd item in submenu
     mainMenuWindowSize: [0.12, 0.12], // [width, height] of main menu window
     subMenuWindowSize: [0.1, 0.12], // [width, height] of submenu window
@@ -190,7 +192,7 @@ export const CASCADING_MENU_CONDITIONS = [
     tunnelType: 'cascading_menu',
     mainMenuSize:8,
     subMenuSize: 8,
-    targetMainMenuIndex: 7, // 0-indexed, so this is the 3rd item
+    targetMainMenuIndex: 3, // 0-indexed, so this is the 3rd item
     targetSubMenuIndex: 7, // 0-indexed, so this is the 2nd item in submenu
     mainMenuWindowSize: [0.12, 0.12], // [width, height] of main menu window
     subMenuWindowSize: [0.12, 0.12], // [width, height] of submenu window
@@ -216,7 +218,7 @@ export const CASCADING_MENU_CONDITIONS = [
     tunnelType: 'cascading_menu',
     mainMenuSize: 4,
     subMenuSize: 4,
-    targetMainMenuIndex: 3, // 0-indexed, so this is the 3rd item
+    targetMainMenuIndex: 1, // 0-indexed, so this is the 3rd item
     targetSubMenuIndex: 3, // 0-indexed, so this is the 2nd item in submenu
     mainMenuWindowSize: [0.12, 0.12], // [width, height] of main menu window
     subMenuWindowSize: [0.12, 0.12], // [width, height] of submenu window
@@ -253,7 +255,7 @@ export const SCALE = 1000;
 export const START_BUTTON_RADIUS = 0.008;
 export const TARGET_RADIUS = 0.01;
 export const TUNNEL_STEP = 0.001;
-export const BASIC_TRIAL_REPETITIONS = 5; // Number of times to repeat each basic condition trial
+export const BASIC_TRIAL_REPETITIONS = 3; // Number of times to repeat each basic condition trial
 export const LASSO_TRIAL_REPETITIONS = 2; // Number of times to repeat each lasso trial
 export const CASCADING_MENU_TRIAL_REPETITIONS = 2; // Number of times to repeat each cascading menu trial
 

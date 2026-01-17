@@ -1,7 +1,7 @@
 import { useRef, useCallback } from 'react';
 import { TrialState, START_BUTTON_RADIUS, TARGET_RADIUS } from '../constants/experimentConstants.js';
 import { ExperimentPhase } from '../constants/experimentConstants.js';
-import { checkTunnelExcursions, checkLassoGrayIconCollision, checkCascadingMenuExcursion } from '../utils/excursionChecker.js';
+import { checkTunnelExcursions, checkLassoGrayIconCollision, checkCascadingMenuExcursion, checkLassoShortcut } from '../utils/excursionChecker.js';
 
 export const useMouseHandler = ({
   phase,
@@ -54,8 +54,8 @@ export const useMouseHandler = ({
     
     const distance = Math.sqrt((x - startButtonPos.x) ** 2 + (y - startButtonPos.y) ** 2);
     
-    // Use smaller radius for lasso trials
-    const buttonRadius = tunnelType === 'lasso' ? 0.003 : START_BUTTON_RADIUS;
+    // Use smaller radius for lasso and cascading menu trials
+    const buttonRadius = (tunnelType === 'lasso' || tunnelType === 'cascading_menu') ? 0.003 : START_BUTTON_RADIUS;
     
     if (distance <= buttonRadius) {
       onStartTrial();
@@ -104,10 +104,9 @@ export const useMouseHandler = ({
     // Note: Position recording is now done via time-based sampling (not on every mouse move)
     
     // Check for excursions - different logic for lasso vs cascading menu vs other trials
-    // Note: Cascading menu trials do not enforce boundary constraints - users can move freely
     if (tunnelType === 'cascading_menu' && menuConfig) {
-      // No excursion checking for cascading menu - cursor can move freely
-      // Just determine if submenu should be visible for rendering
+      // For cascading menu trials, check if cursor is outside menu windows
+      // Determine if submenu should be visible for rendering
       const {
         targetMainMenuIndex,
         mainMenuWindowSize = [0.08, 0.15],
@@ -129,9 +128,49 @@ export const useMouseHandler = ({
       const isHoveringMain = x >= targetItemLeft && x <= targetItemRight &&
                              y >= targetItemTop && y <= targetItemBottom;
       
-      // Update hover state for submenu visibility (but don't check excursions)
+      // Update hover state for submenu visibility
       if (menuHasHoveredRef && isHoveringMain) {
         menuHasHoveredRef.current = true;
+      }
+      
+      // Check for excursions - cursor must stay within menu windows
+      const shouldShowSubmenu = menuHasHoveredRef ? menuHasHoveredRef.current : isHoveringMain;
+      const excursionResult = checkCascadingMenuExcursion(x, y, menuConfig, shouldShowSubmenu);
+      
+      if (excursionResult.isExcursion && shouldEnforceBoundaries()) {
+        // Mark the excursion
+        if (!hasExcursionMarker) {
+          setExcursionMarkers([excursionResult.boundaryPoint]);
+          setHasExcursionMarker(true);
+        }
+        
+        // Record excursion event
+        const excursion = {
+          position: { x, y },
+          distanceOutside: excursionResult.distanceOutside,
+          timestamp: currentTime,
+          boundaryPoint: excursionResult.boundaryPoint
+        };
+        setExcursionEvents(prev => [...prev, excursion]);
+        
+        // Fail the trial immediately when cursor leaves menu windows
+        setTrialState(TrialState.FAILED);
+        return; // Don't continue processing this movement
+      } else if (excursionResult.isExcursion && shouldMarkBoundaries()) {
+        // Just mark the boundary violation without failing
+        if (!hasExcursionMarker) {
+          setExcursionMarkers([excursionResult.boundaryPoint]);
+          setHasExcursionMarker(true);
+        }
+        
+        // Record excursion event
+        const excursion = {
+          position: { x, y },
+          distanceOutside: excursionResult.distanceOutside,
+          timestamp: currentTime,
+          boundaryPoint: excursionResult.boundaryPoint
+        };
+        setExcursionEvents(prev => [...prev, excursion]);
       }
     } else if (tunnelType === 'lasso' && lassoConfig) {
       // For lasso trials, check:
@@ -155,6 +194,31 @@ export const useMouseHandler = ({
         setExcursionEvents(prev => [...prev, collision]);
         
         // Fail the trial immediately when violating constraints
+        setTrialState(TrialState.FAILED);
+        return; // Don't continue processing this movement
+      }
+      
+      // Check for shortcuts/cheating:
+      // 1. Prevent cursor from moving into region formed by connecting border target centers
+      // 2. Prevent direct path from start to end using horizontal bar region
+      const shortcutResult = checkLassoShortcut(x, y, lassoConfig, startButtonPos, targetPos);
+      if (shortcutResult.isExcursion) {
+        // Mark the shortcut violation
+        if (!hasExcursionMarker) {
+          setExcursionMarkers([shortcutResult.boundaryPoint]);
+          setHasExcursionMarker(true);
+        }
+        
+        // Record shortcut violation event
+        const shortcut = {
+          position: { x, y },
+          distanceOutside: shortcutResult.distanceOutside,
+          timestamp: currentTime,
+          boundaryPoint: shortcutResult.boundaryPoint
+        };
+        setExcursionEvents(prev => [...prev, shortcut]);
+        
+        // Fail the trial immediately when attempting to cheat
         setTrialState(TrialState.FAILED);
         return; // Don't continue processing this movement
       }
