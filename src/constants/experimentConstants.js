@@ -29,9 +29,9 @@ export const TrialState = {
 // Trial conditions
 export const BASIC_CONDITIONS = [
   { id: 1, tunnelWidth: 0.02, curvature: 0.025, timeLimit: null, description: "narrow tunnel, gentle curve" },
-  // { id: 2, tunnelWidth: 0.04, curvature: 0.025, timeLimit: null, description: "narrow tunnel, sharp curve" },
-  // { id: 3, tunnelType: 'corner', tunnelWidth: 0.02, numCorners: 2, cornerOffset: 0.1, timeLimit: null, description: "narrow tunnel, 2 corners" },
-  // { id: 4, tunnelType: 'corner', tunnelWidth: 0.04, numCorners: 2, cornerOffset: 0.1, timeLimit: null, description: "narrow tunnel, 3 corners" },
+  { id: 2, tunnelWidth: 0.04, curvature: 0.025, timeLimit: null, description: "narrow tunnel, sharp curve" },
+  { id: 3, tunnelType: 'corner', tunnelWidth: 0.02, numCorners: 2, cornerOffset: 0.1, timeLimit: null, description: "narrow tunnel, 2 corners" },
+  { id: 4, tunnelType: 'corner', tunnelWidth: 0.04, numCorners: 2, cornerOffset: 0.1, timeLimit: null, description: "narrow tunnel, 3 corners" },
   // { id: 7, tunnelType: 'corner', tunnelWidth: 0.05, numCorners: 2, cornerOffset: 0.05, timeLimit: null, description: "wide tunnel, 2 corners" },
   // { id: 8, tunnelType: 'corner', tunnelWidth: 0.05, numCorners: 3, cornerOffset: 0.05, timeLimit: null, description: "wide tunnel, 3 corners" },
 ];
@@ -76,68 +76,68 @@ export const BASIC_CONDITIONS = [
 
 // Lasso selection trial conditions
 export const LASSO_CONDITIONS = [
-  // {
-  //   id: 101,
-  //   tunnelType: 'lasso',
-  //   grid_layout: [
-  //     "O O O O O O O O O",
-  //     "O X X O O O O O O",
-  //     "O X X X X X X X O",
-  //     "O X X X X X X X O",
-  //   ],
-  //   icon_radius: 0.015,
-  //   icon_spacing: 0.035,
-  //   grid_origin: [0.1, 0.05],
-  //   timeLimit: null,
-  //   description: "L-shaped target cluster, medium spacing"
-  // },
-  // {
-  //   id: 102,
-  //   tunnelType: 'lasso',
-  //   grid_layout: [
-  //     ". . . . . . . . .",
-  //     ". X X . . . . . .",
-  //     ". X X X X X X X .",
-  //     ". X X X X X X X ."
-  //   ],
-  //   icon_radius: 0.015,
-  //   icon_spacing: 0.035,
-  //   grid_origin: [0.1, 0.05],
-  //   timeLimit: null,
-  //   description: "L-shaped target cluster, medium spacing"
-  // },
-  // {
-  //   id: 103,
-  //   tunnelType: 'lasso',
-  //   grid_layout: [
-  //     ". . . . . . . . .",
-  //     ". X X . . . . . .",
-  //     ". X X X X X X X .",
-  //     ". X X X X X X X .",
-  //     ". . . . . . . . ."
-  //   ],
-  //   icon_radius: 0.015,
-  //   icon_spacing: 0.035,
-  //   grid_origin: [0.1, 0.05],
-  //   timeLimit: null,
-  //   description: "L-shaped target cluster, medium spacing"
-  // },
-  // {
-  //   id: 104,
-  //   tunnelType: 'lasso',
-  //   grid_layout: [
-  //     ". . . . . . . . .",
-  //     ". X X . . . . . .",
-  //     ". X X X X X X X .",
-  //     ". X X X X X X X .",
-  //     ". . . . . . . . ."
-  //   ],
-  //   icon_radius: 0.013,
-  //   icon_spacing: 0.036,
-  //   grid_origin: [0.1, 0.05],
-  //   timeLimit: null,
-  //   description: "L-shaped target cluster, medium spacing"
-  // },
+  {
+    id: 101,
+    tunnelType: 'lasso',
+    grid_layout: [
+      "O O O O O O O O O",
+      "O X X O O O O O O",
+      "O X X X X X X X O",
+      "O X X X X X X X O",
+    ],
+    icon_radius: 0.015,
+    icon_spacing: 0.035,
+    grid_origin: [0.1, 0.05],
+    timeLimit: null,
+    description: "L-shaped target cluster, medium spacing"
+  },
+  {
+    id: 102,
+    tunnelType: 'lasso',
+    grid_layout: [
+      ". . . . . . . . .",
+      ". X X . . . . . .",
+      ". X X X X X X X .",
+      ". X X X X X X X ."
+    ],
+    icon_radius: 0.015,
+    icon_spacing: 0.035,
+    grid_origin: [0.1, 0.05],
+    timeLimit: null,
+    description: "L-shaped target cluster, medium spacing"
+  },
+  {
+    id: 103,
+    tunnelType: 'lasso',
+    grid_layout: [
+      ". . . . . . . . .",
+      ". X X . . . . . .",
+      ". X X X X X X X .",
+      ". X X X X X X X .",
+      ". . . . . . . . ."
+    ],
+    icon_radius: 0.015,
+    icon_spacing: 0.035,
+    grid_origin: [0.1, 0.05],
+    timeLimit: null,
+    description: "L-shaped target cluster, medium spacing"
+  },
+  {
+    id: 104,
+    tunnelType: 'lasso',
+    grid_layout: [
+      ". . . . . . . . .",
+      ". X X . . . . . .",
+      ". X X X X X X X .",
+      ". X X X X X X X .",
+      ". . . . . . . . ."
+    ],
+    icon_radius: 0.013,
+    icon_spacing: 0.036,
+    grid_origin: [0.1, 0.05],
+    timeLimit: null,
+    description: "L-shaped target cluster, medium spacing"
+  },
   {
     id: 105,
     tunnelType: 'lasso',
