@@ -2,7 +2,6 @@ import {
   START_BUTTON_RADIUS, 
   TARGET_RADIUS 
 } from '../../constants/experimentConstants.js';
-import { sortTargetsClockwise } from '../../utils/excursionChecker.js';
 
 export const drawTunnel = (ctx, tunnelPath, tunnelType, tunnelWidth, segmentWidths, scale) => {
   // Draw original walls first (gray), then gray rectangles on top, then black outer edges
@@ -771,7 +770,9 @@ export const drawLassoGrid = (ctx, lassoConfig, scale) => {
     }
   }
   
-  // Draw polygon connecting target centers in clockwise order (visualization)
+  // Visualization of grid connections disabled
+  // Uncomment below to enable visualization of how grids are connected
+  /*
   if (targets.length >= 3) {
     const sortedTargets = sortTargetsClockwise(targets);
     const polygon = sortedTargets.map(t => ({ x: t.x, y: t.y }));
@@ -811,6 +812,7 @@ export const drawLassoGrid = (ctx, lassoConfig, scale) => {
       ctx.fill();
     }
   }
+  */
 };
 
 export const drawCanvas = (
