@@ -24,11 +24,21 @@ export const advanceTrial = ({
   
     if (nextTrial >= currentConditions.length) {
     if (phase === ExperimentPhase.MAIN_TRIALS) {
-      // Transition to lasso instructions after basic trials
-      setPhase(ExperimentPhase.LASSO_INSTRUCTIONS);
+      // Transition to lasso phase (skip if no lasso conditions)
+      if (LASSO_CONDITIONS.length > 0) {
+        setPhase(ExperimentPhase.LASSO_INSTRUCTIONS);
+      } else if (CASCADING_MENU_CONDITIONS.length > 0) {
+        setPhase(ExperimentPhase.CASCADING_MENU_INSTRUCTIONS);
+      } else {
+        setPhase(ExperimentPhase.COMPLETE);
+      }
     } else if (phase === ExperimentPhase.LASSO_TRIALS) {
-      // Transition to cascading menu instructions after lasso trials
-      setPhase(ExperimentPhase.CASCADING_MENU_INSTRUCTIONS);
+      // Transition to cascading menu phase (skip if no menu conditions)
+      if (CASCADING_MENU_CONDITIONS.length > 0) {
+        setPhase(ExperimentPhase.CASCADING_MENU_INSTRUCTIONS);
+      } else {
+        setPhase(ExperimentPhase.COMPLETE);
+      }
     } else if (phase === ExperimentPhase.CASCADING_MENU_TRIALS) {
       // After cascading menu trials, go to complete
       setPhase(ExperimentPhase.COMPLETE);

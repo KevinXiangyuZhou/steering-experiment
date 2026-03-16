@@ -815,6 +815,175 @@ export const drawLassoGrid = (ctx, lassoConfig, scale) => {
   */
 };
 
+/**
+ * Draw a light blue corridor that follows the actual contour of the target icon
+ * group. The corridor width equals the gap between adjacent icon edges
+ * (icon_spacing - 2 * icon_radius).
+ */
+export const drawLassoTunnelGuide = (ctx, lassoConfig, scale) => {
+  if (!lassoConfig) return;
+
+  const { grid_layout, icon_radius, icon_spacing, grid_origin } = lassoConfig;
+  const [originX, originY] = grid_origin;
+
+  // 1. Parse grid to build a set of target cells
+  const targetSet = new Set();
+  for (let row = 0; row < grid_layout.length; row++) {
+    const cells = grid_layout[row].split(/\s+/).filter(c => c.length > 0);
+    for (let col = 0; col < cells.length; col++) {
+      if (cells[col] === 'X') {
+        targetSet.add(`${row},${col}`);
+      }
+    }
+  }
+  if (targetSet.size === 0) return;
+
+  const isTarget = (r, c) => targetSet.has(`${r},${c}`);
+
+  // 2. Collect CW boundary edges of the target group
+  //    Cell (r,c) spans grid corners (c,r) to (c+1,r+1).
+  //    Each edge is directed so the target interior is to the right.
+  const edges = [];
+  for (const key of targetSet) {
+    const [row, col] = key.split(',').map(Number);
+    if (!isTarget(row - 1, col))
+      edges.push({ from: [col, row], to: [col + 1, row] });       // top
+    if (!isTarget(row, col + 1))
+      edges.push({ from: [col + 1, row], to: [col + 1, row + 1] }); // right
+    if (!isTarget(row + 1, col))
+      edges.push({ from: [col + 1, row + 1], to: [col, row + 1] }); // bottom
+    if (!isTarget(row, col - 1))
+      edges.push({ from: [col, row + 1], to: [col, row] });        // left
+  }
+  if (edges.length === 0) return;
+
+  // 3. Chain edges into a closed polygon by matching endpoints
+  const edgeMap = new Map();
+  for (const edge of edges) {
+    edgeMap.set(`${edge.from[0]},${edge.from[1]}`, edge.to);
+  }
+
+  const polygon = [];
+  const start = edges[0].from;
+  let curr = start;
+  do {
+    polygon.push(curr);
+    const next = edgeMap.get(`${curr[0]},${curr[1]}`);
+    if (!next) break;
+    curr = next;
+  } while (curr[0] !== start[0] || curr[1] !== start[1]);
+
+  if (polygon.length < 3) return;
+
+  // 4. Convert grid corners to real coordinates and compute inner/outer polygons
+  //    Grid corner (c,r) → real (originX + (c-0.5)*spacing, originY + (r-0.5)*spacing)
+  //    d = half the corridor width = spacing/2 - icon_radius
+  const d = icon_spacing / 2 - icon_radius;
+  const innerPoly = [];
+  const outerPoly = [];
+
+  for (let i = 0; i < polygon.length; i++) {
+    const prev = polygon[(i - 1 + polygon.length) % polygon.length];
+    const cur = polygon[i];
+    const next = polygon[(i + 1) % polygon.length];
+
+    // Edge directions in grid units (±1)
+    const d1x = cur[0] - prev[0];
+    const d1y = cur[1] - prev[1];
+    const d2x = next[0] - cur[0];
+    const d2y = next[1] - cur[1];
+
+    // Identify the horizontal (hx) and vertical (vy) components
+    // For CW polygon interior normal = (-dy, dx): offset formulas become
+    //   inner = (realX - vy*d, realY + hx*d)
+    //   outer = (realX + vy*d, realY - hx*d)
+    let hx, vy;
+    if (d1y === 0) { hx = d1x; vy = d2y; }   // incoming horizontal
+    else           { hx = d2x; vy = d1y; }    // incoming vertical
+
+    const realX = originX + (cur[0] - 0.5) * icon_spacing;
+    const realY = originY + (cur[1] - 0.5) * icon_spacing;
+
+    innerPoly.push({ x: (realX - vy * d) * scale, y: (realY + hx * d) * scale });
+    outerPoly.push({ x: (realX + vy * d) * scale, y: (realY - hx * d) * scale });
+  }
+
+  // 5. Fill corridor between outer (CW) and inner (CCW) polygons
+  ctx.save();
+  ctx.fillStyle = 'rgba(135, 206, 250, 0.3)'; // Light blue
+
+  ctx.beginPath();
+  outerPoly.forEach((p, i) => {
+    if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+  });
+  ctx.closePath();
+
+  ctx.moveTo(innerPoly[innerPoly.length - 1].x, innerPoly[innerPoly.length - 1].y);
+  for (let i = innerPoly.length - 2; i >= 0; i--) {
+    ctx.lineTo(innerPoly[i].x, innerPoly[i].y);
+  }
+  ctx.closePath();
+
+  ctx.fill('evenodd');
+  ctx.restore();
+};
+
+/**
+ * Draw a short green arrow at the starting point indicating the expected
+ * movement direction for lasso trials.
+ */
+export const drawDirectionArrow = (ctx, startPos, tunnelPath, scale) => {
+  if (!tunnelPath || tunnelPath.length < 2) return;
+
+  // Determine initial direction from the first segment of the path
+  const p0 = tunnelPath[0];
+  const pN = tunnelPath[Math.min(10, tunnelPath.length - 1)];
+  const dx = pN.x - p0.x;
+  const dy = pN.y - p0.y;
+  const len = Math.sqrt(dx * dx + dy * dy);
+  if (len === 0) return;
+
+  const dirX = dx / len;
+  const dirY = dy / len;
+
+  const arrowLength = 0.015;
+  const arrowHeadSize = 0.005;
+
+  const startX = startPos.x * scale;
+  const startY = startPos.y * scale;
+  const endX = (startPos.x + dirX * arrowLength) * scale;
+  const endY = (startPos.y + dirY * arrowLength) * scale;
+
+  ctx.save();
+  ctx.strokeStyle = 'rgba(0, 180, 0, 0.45)';
+  ctx.fillStyle = 'rgba(0, 180, 0, 0.45)';
+  ctx.lineWidth = 2;
+
+  // Arrow shaft
+  ctx.beginPath();
+  ctx.moveTo(startX, startY);
+  ctx.lineTo(endX, endY);
+  ctx.stroke();
+
+  // Arrowhead
+  const headLen = arrowHeadSize * scale;
+  const angle = Math.atan2(dirY, dirX);
+  ctx.beginPath();
+  ctx.moveTo(endX, endY);
+  ctx.lineTo(
+    endX - headLen * Math.cos(angle - Math.PI / 6),
+    endY - headLen * Math.sin(angle - Math.PI / 6)
+  );
+  ctx.lineTo(
+    endX - headLen * Math.cos(angle + Math.PI / 6),
+    endY - headLen * Math.sin(angle + Math.PI / 6)
+  );
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.restore();
+};
+
 export const drawCanvas = (
   ctx,
   tunnelPath,
@@ -842,9 +1011,13 @@ export const drawCanvas = (
     drawTunnel(ctx, tunnelPath, tunnelType, tunnelWidth, segmentWidths, scale);
   }
   
-  // Draw lasso grid (if lasso tunnel type)
+  // Draw lasso visual guides and grid (if lasso tunnel type)
   if (tunnelType === 'lasso' && lassoConfig) {
+    // Draw light gray corridor between icons (behind everything)
+    drawLassoTunnelGuide(ctx, lassoConfig, scale);
     drawLassoGrid(ctx, lassoConfig, scale);
+    // Draw direction arrow at starting point
+    drawDirectionArrow(ctx, startButtonPos, tunnelPath, scale);
   }
   
   // Draw cascading menu (if cascading menu tunnel type)

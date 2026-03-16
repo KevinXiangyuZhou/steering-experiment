@@ -8,7 +8,7 @@ import {
   LASSO_CONDITIONS,
   CASCADING_MENU_CONDITIONS
 } from '../constants/experimentConstants.js';
-import { generateConditionKey } from '../utils/trialManager.js';
+import { generateConditionKey, shuffleArray } from '../utils/trialManager.js';
 
 export const useKeyboardHandler = ({
   phase,
@@ -35,11 +35,7 @@ export const useKeyboardHandler = ({
           }
           break;
 
-        case ExperimentPhase.ENVIRONMENT_SETUP:
-          if (event.key === ' ') {
-            setPhase(ExperimentPhase.INSTRUCTIONS);
-          }
-          break;
+        // ENVIRONMENT_SETUP keyboard handling is managed by the EnvironmentSetup component itself
         
         case ExperimentPhase.INSTRUCTIONS:
           if (event.key === ' ') {
@@ -53,14 +49,23 @@ export const useKeyboardHandler = ({
           if (event.key === 'r') {
             setupTrial(BASIC_CONDITIONS[0]);
           } else if (event.key === 'n') {
-            setPhase(ExperimentPhase.MAIN_TRIALS);
-            setCurrentTrial(0);
-            setCurrentConditions([...BASIC_CONDITIONS]);
-            setIsPractice(false);
             if (!participantId) {
               setParticipantId(`P${new Date().toTimeString().slice(0,8).replace(/:/g,'')}`);
             }
-            setupTrial(BASIC_CONDITIONS[0]);
+            setIsPractice(false);
+            if (BASIC_CONDITIONS.length > 0) {
+              setPhase(ExperimentPhase.MAIN_TRIALS);
+              setCurrentTrial(0);
+              const shuffledBasic = shuffleArray([...BASIC_CONDITIONS]);
+              setCurrentConditions(shuffledBasic);
+              setupTrial(shuffledBasic[0]);
+            } else if (LASSO_CONDITIONS.length > 0) {
+              setPhase(ExperimentPhase.LASSO_INSTRUCTIONS);
+            } else if (CASCADING_MENU_CONDITIONS.length > 0) {
+              setPhase(ExperimentPhase.CASCADING_MENU_INSTRUCTIONS);
+            } else {
+              setPhase(ExperimentPhase.COMPLETE);
+            }
           }
           break;
         
@@ -72,12 +77,19 @@ export const useKeyboardHandler = ({
         
         case ExperimentPhase.LASSO_INSTRUCTIONS:
           if (event.key === ' ') {
-            // Start lasso trials
-            setPhase(ExperimentPhase.LASSO_TRIALS);
-            setCurrentTrial(0);
-            setCurrentConditions([...LASSO_CONDITIONS]);
-            setIsPractice(false);
-            setupTrial(LASSO_CONDITIONS[0]);
+            if (LASSO_CONDITIONS.length > 0) {
+              // Start lasso trials
+              setPhase(ExperimentPhase.LASSO_TRIALS);
+              setCurrentTrial(0);
+              const shuffledLasso = shuffleArray([...LASSO_CONDITIONS]);
+              setCurrentConditions(shuffledLasso);
+              setIsPractice(false);
+              setupTrial(shuffledLasso[0]);
+            } else if (CASCADING_MENU_CONDITIONS.length > 0) {
+              setPhase(ExperimentPhase.CASCADING_MENU_INSTRUCTIONS);
+            } else {
+              setPhase(ExperimentPhase.COMPLETE);
+            }
           }
           break;
         
@@ -89,12 +101,17 @@ export const useKeyboardHandler = ({
         
         case ExperimentPhase.CASCADING_MENU_INSTRUCTIONS:
           if (event.key === ' ') {
-            // Start cascading menu trials
-            setPhase(ExperimentPhase.CASCADING_MENU_TRIALS);
-            setCurrentTrial(0);
-            setCurrentConditions([...CASCADING_MENU_CONDITIONS]);
-            setIsPractice(false);
-            setupTrial(CASCADING_MENU_CONDITIONS[0]);
+            if (CASCADING_MENU_CONDITIONS.length > 0) {
+              // Start cascading menu trials
+              setPhase(ExperimentPhase.CASCADING_MENU_TRIALS);
+              setCurrentTrial(0);
+              const shuffledMenu = shuffleArray([...CASCADING_MENU_CONDITIONS]);
+              setCurrentConditions(shuffledMenu);
+              setIsPractice(false);
+              setupTrial(shuffledMenu[0]);
+            } else {
+              setPhase(ExperimentPhase.COMPLETE);
+            }
           }
           break;
         

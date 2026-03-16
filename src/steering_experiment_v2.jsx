@@ -148,6 +148,25 @@ const HumanSteeringExperiment = () => {
       setTunnelType('corner');
       setTunnelWidth(width);
       setLassoConfig(null); // Clear lasso config
+    } else if (condition.tunnelType === 'straight' || condition.tunnelType === 'gentle_sinusoidal') {
+      // Straight and gentle sinusoidal use the same curved tunnel generator
+      // Straight has curvature=0, gentle sinusoidal has lower curvature
+      const [generatedPath, width] = generateTunnelPath(
+        condition.tunnelWidth,
+        condition.curvature || 0
+      );
+      path = generatedPath;
+      setTunnelType('curved');
+      setTunnelWidth(width);
+      setLassoConfig(null);
+      setMenuConfig(null);
+    } else if (condition.tunnelType === 'wide_to_narrow') {
+      path = generateSequentialTunnelPath(condition);
+      setTunnelType('sequential');
+      setSegmentWidths([condition.segment1Width, condition.segment2Width]);
+      setTunnelWidth(condition.segment1Width);
+      setLassoConfig(null);
+      setMenuConfig(null);
     } else if (condition.tunnelType === 'lasso') {
       const [generatedPath, width, lassoStartPos, lassoEndPos] = generateLassoPath(condition, 0.002);
       path = generatedPath;
@@ -389,12 +408,11 @@ const HumanSteeringExperiment = () => {
     setTrialData(prev => [...prev, trialResult]);
     
     // Check if we need to repeat this trial
-    // Determine repetition count based on trial type
-    const repetitions = currentCondition.tunnelType === 'lasso' 
-      ? LASSO_TRIAL_REPETITIONS 
-      : currentCondition.tunnelType === 'cascading_menu'
-      ? CASCADING_MENU_TRIAL_REPETITIONS
-      : BASIC_TRIAL_REPETITIONS;
+    // Use per-condition repetitions if available, otherwise fall back to type-based defaults
+    const repetitions = currentCondition.repetitions
+      || (currentCondition.tunnelType === 'lasso' ? LASSO_TRIAL_REPETITIONS
+      : currentCondition.tunnelType === 'cascading_menu' ? CASCADING_MENU_TRIAL_REPETITIONS
+      : BASIC_TRIAL_REPETITIONS);
     
     if (currentRepetition < repetitions) {
       // More repetitions needed - increment repetition counter and repeat same trial
@@ -672,7 +690,7 @@ const HumanSteeringExperiment = () => {
         return <WelcomeScreen />;
       
       case ExperimentPhase.ENVIRONMENT_SETUP:
-        return <EnvironmentSetup />;
+        return <EnvironmentSetup onComplete={() => setPhase(ExperimentPhase.INSTRUCTIONS)} />;
       
       case ExperimentPhase.INSTRUCTIONS:
         return <Instructions />;
@@ -700,11 +718,10 @@ const HumanSteeringExperiment = () => {
       default:
         // Determine repetition count based on current trial type
         const currentCondition = currentConditions[currentTrial];
-        const totalRepetitions = currentCondition && currentCondition.tunnelType === 'lasso'
-          ? LASSO_TRIAL_REPETITIONS
-          : currentCondition && currentCondition.tunnelType === 'cascading_menu'
-          ? CASCADING_MENU_TRIAL_REPETITIONS
-          : BASIC_TRIAL_REPETITIONS;
+        const totalRepetitions = currentCondition?.repetitions
+          || (currentCondition?.tunnelType === 'lasso' ? LASSO_TRIAL_REPETITIONS
+          : currentCondition?.tunnelType === 'cascading_menu' ? CASCADING_MENU_TRIAL_REPETITIONS
+          : BASIC_TRIAL_REPETITIONS);
         
         return (
           <TrialCanvas

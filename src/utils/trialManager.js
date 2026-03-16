@@ -6,6 +6,15 @@ import {
   ExperimentPhase 
 } from '../constants/experimentConstants.js';
 
+// Fisher-Yates shuffle for randomizing condition order within each phase
+export const shuffleArray = (array) => {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+  return array;
+};
+
 // Generate condition key for tracking practiced conditions
 export const generateConditionKey = (condition) => {
   if (condition.tunnelType === 'sequential') {
