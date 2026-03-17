@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { ExperimentPhase, TrialState, BASIC_CONDITIONS, BASIC_TRIAL_REPETITIONS, LASSO_TRIAL_REPETITIONS, CASCADING_MENU_TRIAL_REPETITIONS, CASCADING_MENU_CONDITIONS, TARGET_RADIUS } from './constants/experimentConstants.js';
+import { ExperimentPhase, TrialState, BASIC_CONDITIONS, BASIC_TRIAL_REPETITIONS, LASSO_TRIAL_REPETITIONS, CASCADING_MENU_TRIAL_REPETITIONS, CASCADING_MENU_CONDITIONS, LASSO_CONDITIONS, TARGET_RADIUS } from './constants/experimentConstants.js';
 import { getUrlParameters } from './utils/urlUtils.js';
 import { generateTunnelPath, generateSequentialTunnelPath, generateCornerPath, generateLassoPath, generateCascadingMenuPath } from './utils/tunnelGenerator.js';
 import { downloadData, uploadData } from './utils/dataManager.js';
@@ -16,11 +16,12 @@ import { CascadingMenuInstructions } from './components/ui/CascadingMenuInstruct
 import { TimeConstraintIntro } from './components/ui/TimeConstraintIntro.jsx';
 import { CompleteScreen } from './components/ui/CompleteScreen.jsx';
 import { TrialCanvas } from './components/ui/TrialCanvas.jsx';
-import { 
-  getNormalTrialNumber, 
-  getNormalTotalTrials, 
-  getTimedTrialNumber, 
-  getTimedTotalTrials 
+import {
+  getNormalTrialNumber,
+  getNormalTotalTrials,
+  getTimedTrialNumber,
+  getTimedTotalTrials,
+  shuffleArray
 } from './utils/trialManager.js';
 import { calculateCanvasDimensions } from './utils/canvasSize.js';
 
@@ -693,13 +694,41 @@ const HumanSteeringExperiment = () => {
         return <EnvironmentSetup onComplete={() => setPhase(ExperimentPhase.INSTRUCTIONS)} />;
       
       case ExperimentPhase.INSTRUCTIONS:
-        return <Instructions />;
-      
+        return <Instructions onNext={() => {
+          setPhase(ExperimentPhase.PRACTICE);
+          setIsPractice(true);
+          setupTrial(BASIC_CONDITIONS[0]);
+        }} />;
+
       case ExperimentPhase.LASSO_INSTRUCTIONS:
-        return <LassoInstructions />;
-      
+        return <LassoInstructions onNext={() => {
+          if (LASSO_CONDITIONS.length > 0) {
+            setPhase(ExperimentPhase.LASSO_TRIALS);
+            setCurrentTrial(0);
+            const shuffledLasso = shuffleArray([...LASSO_CONDITIONS]);
+            setCurrentConditions(shuffledLasso);
+            setIsPractice(false);
+            setupTrial(shuffledLasso[0]);
+          } else if (CASCADING_MENU_CONDITIONS.length > 0) {
+            setPhase(ExperimentPhase.CASCADING_MENU_INSTRUCTIONS);
+          } else {
+            setPhase(ExperimentPhase.COMPLETE);
+          }
+        }} />;
+
       case ExperimentPhase.CASCADING_MENU_INSTRUCTIONS:
-        return <CascadingMenuInstructions />;
+        return <CascadingMenuInstructions onNext={() => {
+          if (CASCADING_MENU_CONDITIONS.length > 0) {
+            setPhase(ExperimentPhase.CASCADING_MENU_TRIALS);
+            setCurrentTrial(0);
+            const shuffledMenu = shuffleArray([...CASCADING_MENU_CONDITIONS]);
+            setCurrentConditions(shuffledMenu);
+            setIsPractice(false);
+            setupTrial(shuffledMenu[0]);
+          } else {
+            setPhase(ExperimentPhase.COMPLETE);
+          }
+        }} />;
       
       case ExperimentPhase.TIME_CONSTRAINT_INTRO:
         return <TimeConstraintIntro />;

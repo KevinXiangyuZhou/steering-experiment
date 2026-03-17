@@ -8,7 +8,7 @@ import { TUNNEL_STEP } from '../constants/experimentConstants.js';
  * @param {number} startX - Starting x-coordinate of tunnel. Default 0.0.
  * @param {number} endX - Ending x-coordinate of tunnel. Default 0.46.
  * @param {number} yBase - Base y-coordinate for tunnel centerline. Default 0.13.
- * @param {number} wavelength - Wavelength for sine wave. Default 0.15.
+ * @param {number} wavelength - Wavelength for sine wave. Default 0.23 (~2 oscillations over 0.46m tunnel).
  * @param {number} stepSize - Step size along x-axis. Default 0.002.
  * @returns {Array} Array containing [tunnel_path, width] where tunnel_path is an array of {x, y} objects.
  */
@@ -18,7 +18,7 @@ export const generateTunnelPath = (
   startX = 0.0,
   endX = 0.46,
   yBase = 0.13,
-  wavelength = 0.15,
+  wavelength = 0.23,
   stepSize = 0.002
 ) => {
   // Generate x coordinates
