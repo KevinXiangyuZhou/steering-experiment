@@ -20,7 +20,7 @@ export async function uploadExperimentData(experimentData) {
       version: '2.0' // Version of the experiment
     };
 
-    const docRef = await addDoc(collection(db, 'user_study_results'), dataWithTimestamp);
+    const docRef = await addDoc(collection(db, 'study-mar-26'), dataWithTimestamp);
     console.log('Data uploaded successfully with ID:', docRef.id);
     return docRef.id;
   } catch (error) {
@@ -72,7 +72,7 @@ export function isFirebaseConfigured() {
  */
 export async function downloadAllExperimentData() {
   try {
-    const q = query(collection(db, 'user_study_results'), orderBy('uploadedAt', 'desc'));
+    const q = query(collection(db, 'study-mar-26'), orderBy('uploadedAt', 'desc'));
     const querySnapshot = await getDocs(q);
     
     const allData = [];
