@@ -96,11 +96,12 @@ export const TrialCanvas = ({
           height={canvasHeight || 260}
           style={{
             width: `${canvasWidth || 460}px`,
-            height: `${canvasHeight || 260}px`
+            height: `${canvasHeight || 260}px`,
+            cursor: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16'%3E%3Cline x1='8' y1='0' x2='8' y2='6' stroke='black' stroke-width='0.5'/%3E%3Cline x1='8' y1='10' x2='8' y2='16' stroke='black' stroke-width='0.5'/%3E%3Cline x1='0' y1='8' x2='6' y2='8' stroke='black' stroke-width='0.5'/%3E%3Cline x1='10' y1='8' x2='16' y2='8' stroke='black' stroke-width='0.5'/%3E%3C/svg%3E") 8 8, crosshair`
           }}
           onClick={onMouseClick}
           onMouseMove={onMouseMove}
-          className="border border-gray-300 cursor-crosshair"
+          className="border border-gray-300"
         />
         
         {/* Simple status and control information */}
