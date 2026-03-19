@@ -23,7 +23,7 @@ export const CascadingMenuInstructions = ({ onNext }) => {
         <div className="px-8 py-6 space-y-5">
 
           <section>
-            <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-3 text-center">Instructions</p>
+            <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-3 text-center">Task Instructions</p>
             <ol className="space-y-2.5">
               <Step number="1">Click the <strong>green START button</strong> to begin each trial.</Step>
               <Step number="2">Move your cursor <strong>vertically down</strong> the main menu to the <strong>red target item</strong>.</Step>

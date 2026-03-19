@@ -6,7 +6,7 @@ const PAGE_LABELS = [
   'Continue to mouse settings',
   'Continue to screen setup',
   'Continue to final checklist',
-  'Begin the experiment',
+  'Begin the study',
 ];
 
 const PageIndicator = ({ current, total }) => (
@@ -261,12 +261,11 @@ const ConsentPage = ({ onAgree }) => {
             <p className="text-xs font-semibold uppercase tracking-widest text-indigo-600">Consent Statement</p>
             <p className="text-sm text-gray-700 leading-relaxed">By clicking <strong>"I Agree"</strong> below, you acknowledge that:</p>
             <ul className="space-y-1 text-sm text-gray-700">
-              <li className="flex items-start gap-2"><span className="text-indigo-500 mt-0.5">·</span>You are at least 18 years of age.</li>
-              <li className="flex items-start gap-2"><span className="text-indigo-500 mt-0.5">·</span>You are using a desktop computer and a physical mouse.</li>
+              <li className="flex items-start gap-2"><span className="text-indigo-500 mt-0.5">·</span>You are using a physical mouse (not a trackpad, tablet, or touchscreen).</li>
               <li className="flex items-start gap-2"><span className="text-indigo-500 mt-0.5">·</span>You have read the above information and voluntarily agree to participate.</li>
+              <li className="flex items-start gap-2"><span className="text-indigo-500 mt-0.5">·</span>Fail to meet these requirements or to complete the study will result in an incomplete submission on Prolific, and you will not receive payment.</li>
             </ul>
           </section>
-
         </div>
 
         <div className="px-12 py-5 border-t border-gray-100 flex gap-3">

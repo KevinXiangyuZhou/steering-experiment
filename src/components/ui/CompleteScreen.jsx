@@ -73,6 +73,20 @@ export const CompleteScreen = ({
         )}
         
         <p className="text-base text-gray-700 leading-relaxed">Thank you for participating!</p>
+
+        {uploadStatus === 'success' && (
+          <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-sm font-semibold text-blue-900 mb-2">Click below to return to Prolific for completion code:</p>
+            <a
+              href="https://app.prolific.com/submissions/complete?cc=CQ71BMP6"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block bg-blue-600 hover:bg-blue-700 text-gray-900 font-bold py-3 px-6 rounded-lg w-full text-center"
+            >
+              Complete Submission on Prolific →
+            </a>
+          </div>
+        )}
       </div>
     </div>
   );
