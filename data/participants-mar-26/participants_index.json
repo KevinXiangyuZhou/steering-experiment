@@ -1,8 +1,32 @@
 {
-  "extractionDate": "2026-03-19T23:09:09.495Z",
-  "sourceFile": "user_study_results_2026-03-19T23-09-04-749Z.json",
-  "totalParticipants": 10,
+  "extractionDate": "2026-03-20T21:32:29.015Z",
+  "sourceFile": "user_study_results_2026-03-20T21-31-27-395Z.json",
+  "totalParticipants": 14,
   "participants": [
+    {
+      "participantId": "P659c0682d109f8537a89fdd3",
+      "filename": "participant_P659c0682d109f8537a89fdd3.json",
+      "sessions": 1,
+      "trials": 151
+    },
+    {
+      "participantId": "P5de79710df86d370476119cd",
+      "filename": "participant_P5de79710df86d370476119cd.json",
+      "sessions": 1,
+      "trials": 151
+    },
+    {
+      "participantId": "P6981093d5da8632454f038ab",
+      "filename": "participant_P6981093d5da8632454f038ab.json",
+      "sessions": 1,
+      "trials": 151
+    },
+    {
+      "participantId": "P69b1e5c5145bfd9c6480d144",
+      "filename": "participant_P69b1e5c5145bfd9c6480d144.json",
+      "sessions": 1,
+      "trials": 151
+    },
     {
       "participantId": "P5c3c1617f5ebd500018596cb",
       "filename": "participant_P5c3c1617f5ebd500018596cb.json",
