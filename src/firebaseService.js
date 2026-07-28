@@ -16,8 +16,7 @@ export async function uploadExperimentData(experimentData) {
     // Add timestamp and upload to Firestore
     const dataWithTimestamp = {
       ...experimentData,
-      uploadedAt: serverTimestamp(),
-      version: '2.0' // Version of the experiment
+      uploadedAt: serverTimestamp()
     };
 
     const docRef = await addDoc(collection(db, 'study-mar-26'), dataWithTimestamp);

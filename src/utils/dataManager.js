@@ -33,7 +33,7 @@ export const uploadData = async (participantId, prolificData, trialData) => {
       totalTrials: trialData.length,
       averageCompletionTime: trialData.reduce((sum, t) => sum + t.completionTime, 0) / trialData.length,
     },
-    experimentVersion: '3.0',
+    experimentVersion: '4.0', // target-radius sweep + click-to-finish
     completedAt: new Date().toISOString()
   };
 

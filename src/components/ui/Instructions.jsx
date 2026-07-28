@@ -26,10 +26,11 @@ export const Instructions = ({ onNext }) => {
             <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-3 text-center">Instructions</p>
             <ol className="space-y-2.5">
               <Step number="1">Click the <strong>green START button</strong> to begin each trial.</Step>
-              <Step number="2">Navigate your cursor through the tunnel to reach the <strong>red target</strong>.</Step>
-              <Step number="3"><strong>Keep moving</strong> continuously — do not stop after clicking Start.</Step>
-              <Step number="4">Press <kbd className="bg-gray-100 text-gray-700 px-1.5 py-0.5 rounded text-xs font-mono">R</kbd> to restart if you stop or get interrupted.</Step>
-              <Step number="5">Move as smoothly and accurately as you can.</Step>
+              <Step number="2">Navigate your cursor through the tunnel toward the <strong>red target</strong> at the end.</Step>
+              <Step number="3">Once you reach it, <strong>click on the red target</strong> to finish the trial. The target changes size between trials, so watch for it.</Step>
+              <Step number="4"><strong>Keep moving</strong> continuously through the tunnel — do not stop until you're clicking the target.</Step>
+              <Step number="5">Press <kbd className="bg-gray-100 text-gray-700 px-1.5 py-0.5 rounded text-xs font-mono">R</kbd> to restart if you stop or get interrupted.</Step>
+              <Step number="6">Move as smoothly and accurately as you can.</Step>
             </ol>
           </section>
 

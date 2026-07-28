@@ -5,7 +5,7 @@ import { generateTunnelPath, generateSequentialTunnelPath, generateCornerPath, g
 import { downloadData, uploadData } from './utils/dataManager.js';
 import { advanceTrial } from './utils/trialAdvancement.js';
 import { drawCanvas } from './components/canvas/DrawingFunctions.js';
-import { useKeyboardHandler } from './hooks/useKeyboardHandler.js';
+import { useKeyboardHandler, PRACTICE_CONDITIONS } from './hooks/useKeyboardHandler.js';
 import { useMouseHandler } from './hooks/useMouseHandler.js';
 import { useTrialTimer } from './hooks/useTrialTimer.js';
 import { WelcomeScreen } from './components/ui/WelcomeScreen.jsx';
@@ -36,7 +36,7 @@ const HumanSteeringExperiment = () => {
       return calculateCanvasDimensions();
     }
     // Default fallback values
-    return { width: 460, height: 260, scale: 1000 };
+    return { width: 500, height: 260, scale: 1000 };
   });
   
   // Experiment state
@@ -50,6 +50,7 @@ const HumanSteeringExperiment = () => {
   const [currentPracticeCondition, setCurrentPracticeCondition] = useState(null);
   const [practicedConditions, setPracticedConditions] = useState(new Set());
   const [currentRepetition, setCurrentRepetition] = useState(1); // Track current repetition (1-indexed)
+  const [practiceIndex, setPracticeIndex] = useState(0);
 
   // Trial data
   const [trialData, setTrialData] = useState([]);
@@ -79,6 +80,7 @@ const HumanSteeringExperiment = () => {
   const [menuConfig, setMenuConfig] = useState(null); // Store cascading menu configuration
   const menuHasHoveredRef = useRef(false); // Track if we've hovered over target item (persistent submenu)
   const [targetPos, setTargetPos] = useState({ x: 0, y: 0 });
+  const [targetRadius, setTargetRadius] = useState(TARGET_RADIUS); // NEW: per-trial radius for Fitts' law sweep
   const [startButtonPos, setStartButtonPos] = useState({ x: 0, y: 0 });
 
   // Timer state
@@ -222,6 +224,7 @@ const HumanSteeringExperiment = () => {
       setMenuConfig(null);
     }
     setTunnelPath(path);
+    setTargetRadius(condition.targetRadius || TARGET_RADIUS);
     setTimeLimit(condition.timeLimit);
     
     // For non-lasso trials, use path endpoints as start/end positions
@@ -254,7 +257,7 @@ const HumanSteeringExperiment = () => {
     }
   }, []);
 
-  const startTrialMovement = () => {
+  const startTrialMovement = (clickPos) => {
     setTrialState(TrialState.IN_PROGRESS);
     const startTime = Date.now();
     setTrialStartTime(startTime);
@@ -264,7 +267,10 @@ const HumanSteeringExperiment = () => {
       setTimeRemaining(timeLimit);
     }
     
-    const startPos = { x: startButtonPos.x, y: startButtonPos.y };
+    // Use the actual click position (already validated to be within the
+    // start button's radius) instead of snapping to the exact button
+    // center, so the dot doesn't visibly jump the instant the trial begins.
+    const startPos = clickPos || { x: startButtonPos.x, y: startButtonPos.y };
     setCursorPos(startPos);
     cursorPosRef.current = startPos; // Update ref immediately
     setCursorVel({ x: 0, y: 0 });
@@ -285,11 +291,29 @@ const HumanSteeringExperiment = () => {
     const completionTime = (endTime - trialStartTime) / 1000;
     
     if (isPractice || phase === ExperimentPhase.TIME_TRIAL_PRACTICE) {
-      if (success) {
-        const phaseName = phase === ExperimentPhase.PRACTICE ? "Practice" : "Individual practice";
-        console.log(`${phaseName} completed! Time: ${completionTime.toFixed(2)}s`);
+      if (!success) {
+        setTrialState(TrialState.FAILED);
+        return;
       }
-      setTrialState(success ? TrialState.WAITING_FOR_START : TrialState.FAILED);
+
+      const phaseName = phase === ExperimentPhase.PRACTICE ? "Practice" : "Individual practice";
+      console.log(`${phaseName} completed! Time: ${completionTime.toFixed(2)}s`);
+
+      if (phase === ExperimentPhase.PRACTICE) {
+        // Auto-advance through the radius sweep, mirroring how MAIN_TRIALS
+        // advances on every click-to-finish - resets cursor/tunnel/target
+        // and moves the progress bar forward.
+        if (practiceIndex < PRACTICE_CONDITIONS.length - 1) {
+          const nextIndex = practiceIndex + 1;
+          setPracticeIndex(nextIndex);
+          setupTrial(PRACTICE_CONDITIONS[nextIndex]);
+        } else {
+          // Finished all 6 - wait here; 'n' moves on to main trials.
+          setTrialState(TrialState.WAITING_FOR_START);
+        }
+      } else {
+        setTrialState(TrialState.WAITING_FOR_START);
+      }
       return;
     }
     
@@ -380,9 +404,9 @@ const HumanSteeringExperiment = () => {
         }
       } else {
         // For basic and lasso trials, check if final position is within circular target
-        const targetRadius = currentCondition.tunnelType === 'lasso' ? 0.003 : TARGET_RADIUS;
+        const verifyRadius = currentCondition.tunnelType === 'lasso' ? 0.003 : (currentCondition.targetRadius || TARGET_RADIUS);
         const targetDist = Math.sqrt((finalPos.x - targetPos.x) ** 2 + (finalPos.y - targetPos.y) ** 2);
-        const isInTargetRegion = targetDist < targetRadius;
+        const isInTargetRegion = targetDist < verifyRadius;
         
         // Always ensure the trajectory ends within the target region
         if (isInTargetRegion) {
@@ -469,6 +493,8 @@ const HumanSteeringExperiment = () => {
     setCurrentPracticeCondition,
     practicedConditions,
     setPracticedConditions,
+    practiceIndex,
+    setPracticeIndex,
     participantId,
     setParticipantId,
     setIsPractice,
@@ -484,6 +510,7 @@ const HumanSteeringExperiment = () => {
     setCursorVel,
     startButtonPos,
     targetPos,
+    targetRadius,
     tunnelPath,
     tunnelType,
     tunnelWidth,
@@ -558,6 +585,7 @@ const HumanSteeringExperiment = () => {
         trialState,
         startButtonPos,
         targetPos,
+        targetRadius,
         canvasDimensions.width,
         canvasDimensions.height,
         canvasDimensions.scale,
@@ -574,7 +602,7 @@ const HumanSteeringExperiment = () => {
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [cursorPos, trialState, tunnelPath, startButtonPos, targetPos, tunnelWidth, excursionMarkers, shouldMarkBoundaries, hasExcursionMarker, tunnelType, segmentWidths, canvasDimensions, lassoConfig, menuConfig]);
+  }, [cursorPos, trialState, tunnelPath, startButtonPos, targetPos, targetRadius, tunnelWidth, excursionMarkers, shouldMarkBoundaries, hasExcursionMarker, tunnelType, segmentWidths, canvasDimensions, lassoConfig, menuConfig]);
 
   const handleUploadData = async () => {
     setUploadStatus('uploading');
@@ -613,7 +641,7 @@ const HumanSteeringExperiment = () => {
       statusText = "[Practice Round]";
       statusColor = "text-green-600";
     } else if (phase === ExperimentPhase.MAIN_TRIALS && currentTrial < currentConditions.length) {
-      statusText = `Trial ${getNormalTrialNumber(phase, currentTrial)}/${getNormalTotalTrials()}`;
+      statusText = `Trial ${getNormalTrialNumber(phase, currentTrial, currentConditions)}/${getNormalTotalTrials()}`;
       statusColor = "text-blue-600";
     } else if (phase === ExperimentPhase.LASSO_TRIALS && currentTrial < currentConditions.length) {
       statusText = `Lasso Trial ${currentTrial + 1}/${currentConditions.length}`;
@@ -697,7 +725,8 @@ const HumanSteeringExperiment = () => {
         return <Instructions onNext={() => {
           setPhase(ExperimentPhase.PRACTICE);
           setIsPractice(true);
-          setupTrial(BASIC_CONDITIONS[0]);
+          setPracticeIndex(0);
+          setupTrial(PRACTICE_CONDITIONS[0]);
         }} />;
 
       case ExperimentPhase.LASSO_INSTRUCTIONS:
@@ -745,12 +774,24 @@ const HumanSteeringExperiment = () => {
         );
       
       default:
-        // Determine repetition count based on current trial type
-        const currentCondition = currentConditions[currentTrial];
-        const totalRepetitions = currentCondition?.repetitions
-          || (currentCondition?.tunnelType === 'lasso' ? LASSO_TRIAL_REPETITIONS
-          : currentCondition?.tunnelType === 'cascading_menu' ? CASCADING_MENU_TRIAL_REPETITIONS
-          : BASIC_TRIAL_REPETITIONS);
+        // During practice, progress is position within PRACTICE_CONDITIONS.
+        // During main trials, it's position within the current groupId block.
+        let blockPosition = 1;
+        let blockSize = 1;
+        if (isPractice) {
+          blockPosition = practiceIndex + 1;
+          blockSize = PRACTICE_CONDITIONS.length;
+        } else {
+          const currentCondition = currentConditions[currentTrial];
+          if (currentCondition?.groupId !== undefined) {
+            let start = currentTrial;
+            while (start > 0 && currentConditions[start - 1]?.groupId === currentCondition.groupId) start--;
+            let end = currentTrial;
+            while (end < currentConditions.length - 1 && currentConditions[end + 1]?.groupId === currentCondition.groupId) end++;
+            blockPosition = currentTrial - start + 1;
+            blockSize = end - start + 1;
+          }
+        }
         
         return (
           <TrialCanvas
@@ -767,8 +808,8 @@ const HumanSteeringExperiment = () => {
             renderControls={renderControls}
             canvasWidth={canvasDimensions.width}
             canvasHeight={canvasDimensions.height}
-            currentRepetition={currentRepetition}
-            totalRepetitions={totalRepetitions}
+            currentRepetition={blockPosition}
+            totalRepetitions={blockSize}
             isPractice={isPractice}
           />
         );

@@ -996,6 +996,7 @@ export const drawCanvas = (
   trialState,
   startButtonPos,
   targetPos,
+  targetRadius = null,
   canvasWidth,
   canvasHeight,
   scale,
@@ -1060,7 +1061,7 @@ export const drawCanvas = (
     }
     
     // Draw target (normal size for non-lasso, non-menu trials)
-    drawTarget(ctx, targetPos, scale);
+    drawTarget(ctx, targetPos, scale, targetRadius);
   }
   
   // Draw cursor last so it appears on top of everything
