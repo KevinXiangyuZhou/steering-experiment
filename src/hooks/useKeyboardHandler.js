@@ -8,19 +8,8 @@ import {
   LASSO_CONDITIONS,
   CASCADING_MENU_CONDITIONS
 } from '../constants/experimentConstants.js';
-import { generateConditionKey, shuffleArray, shuffleGroupedConditions } from '../utils/trialManager.js';
- 
-// One practice trial per target-radius ratio, so participants feel the
-// click-to-finish mechanic at every size before real trials start.
-// Picks the first BASIC_CONDITIONS entry matching each distinct ratio.
-const getPracticeConditions = () => {
-  if (BASIC_CONDITIONS.length === 0) return [];
-  const firstGroupId = BASIC_CONDITIONS[0].groupId;
-  const practiceSet = BASIC_CONDITIONS.filter(c => c.groupId === firstGroupId);
-  return practiceSet.length > 0 ? practiceSet : [BASIC_CONDITIONS[0]];
-};
-export const PRACTICE_CONDITIONS = getPracticeConditions();
- 
+import { generateConditionKey, shuffleArray } from '../utils/trialManager.js';
+
 export const useKeyboardHandler = ({
   phase,
   setPhase,
@@ -32,8 +21,6 @@ export const useKeyboardHandler = ({
   setCurrentPracticeCondition,
   practicedConditions,
   setPracticedConditions,
-  practiceIndex,
-  setPracticeIndex,
   participantId,
   setParticipantId,
   setIsPractice,
@@ -47,21 +34,20 @@ export const useKeyboardHandler = ({
             setPhase(ExperimentPhase.ENVIRONMENT_SETUP);
           }
           break;
- 
+
         // ENVIRONMENT_SETUP keyboard handling is managed by the EnvironmentSetup component itself
         
         case ExperimentPhase.INSTRUCTIONS:
           if (event.key === ' ') {
             setPhase(ExperimentPhase.PRACTICE);
             setIsPractice(true);
-            setPracticeIndex(0);
-            setupTrial(PRACTICE_CONDITIONS[0]);
+            setupTrial(BASIC_CONDITIONS[0]);
           }
           break;
         
         case ExperimentPhase.PRACTICE:
           if (event.key === 'r') {
-            setupTrial(PRACTICE_CONDITIONS[practiceIndex]);
+            setupTrial(BASIC_CONDITIONS[0]);
           } else if (event.key === 'n') {
             if (!participantId) {
               setParticipantId(`P${new Date().toTimeString().slice(0,8).replace(/:/g,'')}`);
@@ -70,7 +56,7 @@ export const useKeyboardHandler = ({
             if (BASIC_CONDITIONS.length > 0) {
               setPhase(ExperimentPhase.MAIN_TRIALS);
               setCurrentTrial(0);
-              const shuffledBasic = shuffleGroupedConditions(BASIC_CONDITIONS);
+              const shuffledBasic = shuffleArray([...BASIC_CONDITIONS]);
               setCurrentConditions(shuffledBasic);
               setupTrial(shuffledBasic[0]);
             } else if (LASSO_CONDITIONS.length > 0) {
@@ -195,7 +181,7 @@ export const useKeyboardHandler = ({
         //   break;
       }
     };
- 
+
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
   }, [
@@ -204,7 +190,6 @@ export const useKeyboardHandler = ({
     currentConditions, 
     currentPracticeCondition, 
     participantId, 
-    practiceIndex,
     setupTrial,
     setPhase,
     setCurrentTrial,
@@ -212,7 +197,7 @@ export const useKeyboardHandler = ({
     setCurrentPracticeCondition,
     setPracticedConditions,
     setParticipantId,
-    setIsPractice,
-    setPracticeIndex    
+    setIsPractice
   ]);
 };
+

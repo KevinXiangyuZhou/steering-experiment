@@ -22,8 +22,8 @@ export const TrialCanvas = ({
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4">
       <div className="bg-white rounded-lg shadow-lg p-6">
-        {/* Progress bar for trial repetitions - only shown when a condition repeats in place */}
-        {phase !== ExperimentPhase.TIME_TRIAL_PRACTICE && currentRepetition && totalRepetitions > 1 && (
+        {/* Progress bar for trial repetitions - show for main trials only */}
+        {!isPractice && phase !== ExperimentPhase.TIME_TRIAL_PRACTICE && currentRepetition && totalRepetitions && (
           <div className="mb-4 w-full max-w-md mx-auto">
             <div className="text-sm text-gray-600 mb-2 text-center">
               Repetition {currentRepetition} of {totalRepetitions}
@@ -55,6 +55,7 @@ export const TrialCanvas = ({
         <div className="mb-4 w-full max-w-md mx-auto">
           {phase === ExperimentPhase.TIME_TRIAL_PRACTICE && timeLimit && (
             <div style={{width: '100%'}}>
+              {/* Timer bar background */}
               <div style={{
                 width: '100%', 
                 height: '32px', 
@@ -64,6 +65,7 @@ export const TrialCanvas = ({
                 marginBottom: '8px', 
                 position: 'relative'
               }}>
+                {/* Timer bar fill */}
                 <div
                   style={{ 
                     height: '100%',
@@ -72,10 +74,10 @@ export const TrialCanvas = ({
                     left: '0',
                     transition: 'all 0.1s',
                     backgroundColor: trialState !== TrialState.IN_PROGRESS
-                      ? '#10b981'
+                      ? '#10b981'  // green-500
                       : (timeRemaining / timeLimit) > 0.2
-                      ? '#f59e0b'
-                      : '#ef4444',
+                      ? '#f59e0b'  // yellow-500
+                      : '#ef4444', // red-500
                     width: `${
                       trialState !== TrialState.IN_PROGRESS
                         ? 100 
@@ -90,10 +92,10 @@ export const TrialCanvas = ({
         
         <canvas
           ref={canvasRef}
-          width={canvasWidth || 500}
+          width={canvasWidth || 460}
           height={canvasHeight || 260}
           style={{
-            width: `${canvasWidth || 500}px`,
+            width: `${canvasWidth || 460}px`,
             height: `${canvasHeight || 260}px`,
             cursor: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16'%3E%3Cline x1='8' y1='0' x2='8' y2='6' stroke='black' stroke-width='0.5'/%3E%3Cline x1='8' y1='10' x2='8' y2='16' stroke='black' stroke-width='0.5'/%3E%3Cline x1='0' y1='8' x2='6' y2='8' stroke='black' stroke-width='0.5'/%3E%3Cline x1='10' y1='8' x2='16' y2='8' stroke='black' stroke-width='0.5'/%3E%3C/svg%3E") 8 8, crosshair`
           }}
@@ -102,12 +104,14 @@ export const TrialCanvas = ({
           className="border border-gray-300"
         />
         
+        {/* Simple status and control information */}
         <div className="mt-4 text-center">
           {renderStatus()}
           {renderControls()}
         </div>
       </div>
       
+      {/* Failure overlay */}
       {trialState === TrialState.FAILED && (phase === ExperimentPhase.TIME_TRIALS || phase === ExperimentPhase.SEQUENTIAL_TIME_TRIALS || phase === ExperimentPhase.TIME_TRIAL_PRACTICE) && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
           <div className="bg-gray-100 rounded-lg p-8 text-center">
@@ -129,3 +133,4 @@ export const TrialCanvas = ({
     </div>
   );
 };
+

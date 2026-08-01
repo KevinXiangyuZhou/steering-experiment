@@ -12,23 +12,15 @@ export const CompleteScreen = ({
       <div className="bg-white rounded-lg shadow-lg p-12 text-center max-w-md">
         <h2 className="text-3xl font-bold text-green-600 mb-6 tracking-tight">Study Complete!</h2>
         <p className="mb-6 text-base leading-relaxed text-gray-800">All trials completed successfully!</p>
-
+        
         {/* Upload Status */}
         {uploadStatus === 'idle' && (
-          <div className="mb-6 space-y-2">
+          <div className="mb-6">
             <button
               onClick={onCompleteExperiment}
-              className="bg-green-500 hover:bg-green-700 text-white font-bold py-3 px-6 rounded w-full"
+              className="bg-green-500 hover:bg-green-700 text-white font-bold py-3 px-6 rounded mb-4 w-full"
             >
               Upload Data
-            </button>
-            
-            {/* --- ADD THIS BUTTON HERE SO IT'S ALWAYS VISIBLE --- */}
-            <button
-              onClick={onDownloadData}
-              className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded w-full"
-            >
-              Download Data Locally
             </button>
           </div>
         )}
