@@ -13,9 +13,6 @@ const db = getFirestore(app);
  */
 export async function uploadExperimentData(experimentData) {
   try {
-    // TEMP: measure real upload payload size against Firestore's 1,048,576-byte document limit
-    console.log('[SIZE CHECK] upload payload:', JSON.stringify(experimentData).length, 'bytes (limit: 1,048,576)');
-
     // Add timestamp and upload to Firestore
     const dataWithTimestamp = {
       ...experimentData,

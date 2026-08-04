@@ -26,7 +26,7 @@ export const Instructions = ({ onNext }) => {
             <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-3 text-center">Instructions</p>
             <ol className="space-y-2.5">
               <Step number="1">Click the <strong>green START button</strong> to begin each trial.</Step>
-              <Step number="2">Navigate your cursor through the tunnel to reach the <strong>red target</strong>.</Step>
+              <Step number="2">Navigate your cursor to reach the <strong>red target</strong>. Most trials have a walled tunnel to follow — some are open, with no tunnel at all.</Step>
               <Step number="3"><strong>Keep moving</strong> continuously — do not stop after clicking Start.</Step>
               <Step number="4">Press <kbd className="bg-gray-100 text-gray-700 px-1.5 py-0.5 rounded text-xs font-mono">R</kbd> to restart if you stop or get interrupted.</Step>
               <Step number="5">Move as smoothly and accurately as you can.</Step>
@@ -53,11 +53,16 @@ export const Instructions = ({ onNext }) => {
             </div>
           </section>
 
+          <section className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3">
+            <p className="text-xs font-semibold text-blue-900 mb-0.5">Trial Layouts Vary</p>
+            <p className="text-xs text-blue-800 leading-relaxed">Some trials have <strong>no tunnel at all</strong> — just move freely to the target, staying within the visible canvas. Others start with a <strong>walled section that opens up</strong> partway through; once it opens, the same rule applies — stay within the canvas.</p>
+          </section>
+
           <section className="flex items-center gap-4 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
             <img src="/steering-experiment/screenshots/excursion_hint.png" alt="Excursion marker" className="w-10 h-10 object-contain flex-shrink-0" />
             <div>
               <p className="text-xs font-semibold text-amber-900 mb-0.5">Boundary Excursion</p>
-              <p className="text-xs text-amber-800 leading-relaxed">If your cursor leaves the tunnel, a <strong>red marker</strong> appears. Stay within the walls.</p>
+              <p className="text-xs text-amber-800 leading-relaxed">If your cursor leaves the tunnel walls — or, on open trials, leaves the visible canvas — a <strong>red marker</strong> appears. Stay within bounds.</p>
             </div>
           </section>
 

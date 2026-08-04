@@ -231,7 +231,7 @@ const ConsentPage = ({ onAgree }) => {
             <p className="text-xs font-semibold uppercase tracking-widest"><strong>Please Read the Following Carefully</strong></p>
             <p className="text-sm text-gray-700 leading-relaxed"><strong>Task:</strong> You will use a physical mouse to steer a cursor through digital "tunnels" of varying widths and shapes.</p>
             <p className="text-sm text-gray-700 leading-relaxed"><strong>Requirements:</strong> You must use a desktop computer with a physical mouse (no trackpads, tablets, or touchscreens).</p>
-            <p className="text-sm text-gray-700 leading-relaxed"><strong>Duration:</strong> The study will take approximately 25–35 minutes.</p>
+            <p className="text-sm text-gray-700 leading-relaxed"><strong>Duration:</strong> The study will take approximately 30–40 minutes.</p>
           </section>
 
           <hr className="border-gray-100" />
