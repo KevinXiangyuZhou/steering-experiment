@@ -1,14 +1,15 @@
 import { useEffect } from 'react';
-import { 
-  ExperimentPhase, 
-  BASIC_CONDITIONS, 
-  SEQUENTIAL_CONDITIONS, 
-  TIME_CONDITIONS, 
+import {
+  ExperimentPhase,
+  BASIC_CONDITIONS,
+  PRACTICE_CONDITION,
+  SEQUENTIAL_CONDITIONS,
+  TIME_CONDITIONS,
   SEQUENTIAL_TIME_CONDITIONS,
   LASSO_CONDITIONS,
   CASCADING_MENU_CONDITIONS
 } from '../constants/experimentConstants.js';
-import { generateConditionKey, shuffleArray } from '../utils/trialManager.js';
+import { generateConditionKey, shuffleArray, buildShuffledMainConditions, assignTargetPositions } from '../utils/trialManager.js';
 
 export const useKeyboardHandler = ({
   phase,
@@ -41,13 +42,13 @@ export const useKeyboardHandler = ({
           if (event.key === ' ') {
             setPhase(ExperimentPhase.PRACTICE);
             setIsPractice(true);
-            setupTrial(BASIC_CONDITIONS[0]);
+            setupTrial(PRACTICE_CONDITION);
           }
           break;
-        
+
         case ExperimentPhase.PRACTICE:
           if (event.key === 'r') {
-            setupTrial(BASIC_CONDITIONS[0]);
+            setupTrial(PRACTICE_CONDITION);
           } else if (event.key === 'n') {
             if (!participantId) {
               setParticipantId(`P${new Date().toTimeString().slice(0,8).replace(/:/g,'')}`);
@@ -56,7 +57,7 @@ export const useKeyboardHandler = ({
             if (BASIC_CONDITIONS.length > 0) {
               setPhase(ExperimentPhase.MAIN_TRIALS);
               setCurrentTrial(0);
-              const shuffledBasic = shuffleArray([...BASIC_CONDITIONS]);
+              const shuffledBasic = buildShuffledMainConditions(assignTargetPositions(BASIC_CONDITIONS));
               setCurrentConditions(shuffledBasic);
               setupTrial(shuffledBasic[0]);
             } else if (LASSO_CONDITIONS.length > 0) {

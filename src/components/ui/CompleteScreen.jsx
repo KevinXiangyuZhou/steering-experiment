@@ -12,7 +12,14 @@ export const CompleteScreen = ({
       <div className="bg-white rounded-lg shadow-lg p-12 text-center max-w-md">
         <h2 className="text-3xl font-bold text-green-600 mb-6 tracking-tight">Study Complete!</h2>
         <p className="mb-6 text-base leading-relaxed text-gray-800">All trials completed successfully!</p>
-        
+
+        <button
+          onClick={onDownloadData}
+          className="border-2 border-gray-400 text-gray-700 hover:bg-gray-100 font-bold py-2 px-4 rounded mb-6 w-full"
+        >
+          Download Results
+        </button>
+
         {/* Upload Status */}
         {uploadStatus === 'idle' && (
           <div className="mb-6">
@@ -55,20 +62,12 @@ export const CompleteScreen = ({
               <p className="font-semibold text-lg">Upload failed</p>
             </div>
             <p className="text-base text-red-600 mb-4 leading-relaxed">{uploadError}</p>
-            <div className="space-y-2">
-              <button
-                onClick={onRetryUpload}
-                className="bg-orange-500 hover:bg-orange-700 text-white font-bold py-2 px-4 rounded w-full"
-              >
-                Retry Upload
-              </button>
-              <button
-                onClick={onDownloadData}
-                className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded w-full"
-              >
-                Download Data Only
-              </button>
-            </div>
+            <button
+              onClick={onRetryUpload}
+              className="bg-orange-500 hover:bg-orange-700 text-white font-bold py-2 px-4 rounded w-full"
+            >
+              Retry Upload
+            </button>
           </div>
         )}
         

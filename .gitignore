@@ -192,3 +192,6 @@ downloadDataAdmin.js
 #ignore participant data
 participant_data/
 
+# Project instructions/spec doc (not part of the codebase)
+CLAUDE.md
+

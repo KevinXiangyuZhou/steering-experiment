@@ -63,6 +63,12 @@ export const checkTunnelExcursions = (x, y, tunnelPath, tunnelType, tunnelWidth,
     const segmentIndex = Math.floor(closestIndex / segmentLength);
     const currentSegmentWidth = segmentWidths[Math.min(segmentIndex, segmentWidths.length - 1)];
     halfWidth = currentSegmentWidth / 2;
+  } else if (tunnelType === 'constrained_to_unconstrained') {
+    // First half: real corridor, width = segmentWidths[0]. Second half: fully open (no band
+    // constraint here — canvas-rectangle bounds are enforced separately, see useMouseHandler.js).
+    const segmentLength = tunnelPath.length / 2;
+    const segmentIndex = Math.floor(closestIndex / segmentLength);
+    halfWidth = segmentIndex === 0 ? segmentWidths[0] / 2 : Infinity;
   } else {
     halfWidth = tunnelWidth / 2;
   }
@@ -654,6 +660,44 @@ export const checkCascadingMenuExcursion = (x, y, menuConfig, shouldShowSubmenu)
     else if (y > mainMenuBottom) closestY = mainMenuBottom;
     else closestY = y;
   }
+
+  const distanceOutside = Math.sqrt((x - closestX) ** 2 + (y - closestY) ** 2);
+
+  return {
+    isExcursion: true,
+    boundaryPoint: { x: closestX, y: closestY },
+    distanceOutside: distanceOutside
+  };
+};
+
+/**
+ * Check whether the cursor has left a rectangular canvas-bounds region. Used by trials with no
+ * tunnel corridor (unconstrained pointing, and the open half of constrained-to-unconstrained
+ * pointing) where the only constraint is staying within the visible play area.
+ *
+ * @param {number} x - Cursor x position
+ * @param {number} y - Cursor y position
+ * @param {Object} bounds - { left, right, top, bottom }
+ * @returns {Object} Object with isExcursion boolean, boundaryPoint, and distanceOutside
+ */
+export const checkCanvasBoundsExcursion = (x, y, bounds) => {
+  const { left, right, top, bottom } = bounds;
+
+  const isInBounds = x >= left && x <= right && y >= top && y <= bottom;
+
+  if (isInBounds) {
+    return { isExcursion: false };
+  }
+
+  let closestX;
+  if (x < left) closestX = left;
+  else if (x > right) closestX = right;
+  else closestX = x;
+
+  let closestY;
+  if (y < top) closestY = top;
+  else if (y > bottom) closestY = bottom;
+  else closestY = y;
 
   const distanceOutside = Math.sqrt((x - closestX) ** 2 + (y - closestY) ** 2);
 

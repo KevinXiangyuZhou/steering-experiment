@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { ExperimentPhase, TrialState, BASIC_CONDITIONS, BASIC_TRIAL_REPETITIONS, LASSO_TRIAL_REPETITIONS, CASCADING_MENU_TRIAL_REPETITIONS, CASCADING_MENU_CONDITIONS, LASSO_CONDITIONS, TARGET_RADIUS } from './constants/experimentConstants.js';
+import { ExperimentPhase, TrialState, BASIC_CONDITIONS, PRACTICE_CONDITION, BASIC_TRIAL_REPETITIONS, LASSO_TRIAL_REPETITIONS, CASCADING_MENU_TRIAL_REPETITIONS, CASCADING_MENU_CONDITIONS, LASSO_CONDITIONS, TARGET_RADIUS, TARGET_POSITION_Y } from './constants/experimentConstants.js';
 import { getUrlParameters } from './utils/urlUtils.js';
 import { generateTunnelPath, generateSequentialTunnelPath, generateCornerPath, generateLassoPath, generateCascadingMenuPath } from './utils/tunnelGenerator.js';
 import { downloadData, uploadData } from './utils/dataManager.js';
@@ -21,7 +21,8 @@ import {
   getNormalTotalTrials,
   getTimedTrialNumber,
   getTimedTotalTrials,
-  shuffleArray
+  shuffleArray,
+  computeTargetRadius
 } from './utils/trialManager.js';
 import { calculateCanvasDimensions } from './utils/canvasSize.js';
 
@@ -79,6 +80,7 @@ const HumanSteeringExperiment = () => {
   const [menuConfig, setMenuConfig] = useState(null); // Store cascading menu configuration
   const menuHasHoveredRef = useRef(false); // Track if we've hovered over target item (persistent submenu)
   const [targetPos, setTargetPos] = useState({ x: 0, y: 0 });
+  const [targetRadius, setTargetRadius] = useState(TARGET_RADIUS);
   const [startButtonPos, setStartButtonPos] = useState({ x: 0, y: 0 });
 
   // Timer state
@@ -161,13 +163,49 @@ const HumanSteeringExperiment = () => {
       setTunnelWidth(width);
       setLassoConfig(null);
       setMenuConfig(null);
-    } else if (condition.tunnelType === 'wide_to_narrow') {
+    } else if (condition.tunnelType === 'wide_to_narrow' || condition.tunnelType === 'narrow_to_wide') {
       path = generateSequentialTunnelPath(condition);
       setTunnelType('sequential');
       setSegmentWidths([condition.segment1Width, condition.segment2Width]);
       setTunnelWidth(condition.segment1Width);
       setLassoConfig(null);
       setMenuConfig(null);
+    } else if (condition.tunnelType === 'unconstrained_pointing') {
+      // No tunnel corridor at all — just a start button and a target on an open canvas.
+      path = [];
+      setTunnelType('unconstrained_pointing');
+      setTunnelWidth(0);
+      setLassoConfig(null);
+      setMenuConfig(null);
+      // condition.distance is the Fitts'-law amplitude (D/3, 2D/3, or D) — the main variation for
+      // this trial type; target y-position is a randomly-assigned, evenly-distributed attribute
+      // (see trialManager.js assignTargetPositions), not crossed with distance/radius.
+      const unconstrainedStartPos = { x: 0, y: TARGET_POSITION_Y.middle };
+      const unconstrainedTargetPos = { x: condition.distance, y: TARGET_POSITION_Y[condition.targetPosition] };
+      setStartButtonPos(unconstrainedStartPos);
+      setTargetPos(unconstrainedTargetPos);
+      setCursorPos(unconstrainedStartPos);
+      cursorPosRef.current = unconstrainedStartPos;
+    } else if (condition.tunnelType === 'constrained_to_unconstrained') {
+      // First half: real corridor (width = segment1Width, fixed 50/50 x-split regardless of
+      // distance). Second half: open — condition.distance (4D/6, 5D/6, or D) is the Fitts'-law
+      // amplitude and main variation here; target y-position is a randomly-assigned, evenly-
+      // distributed attribute (see trialManager.js assignTargetPositions), not crossed with
+      // distance/radius/width. The path itself only needs to be a straight reference line for the
+      // first-half excursion check — target position is set explicitly below, not from the path's
+      // last point (which stays on the centerline).
+      path = generateSequentialTunnelPath(condition);
+      setTunnelType('constrained_to_unconstrained');
+      setSegmentWidths([condition.segment1Width, null]);
+      setTunnelWidth(condition.segment1Width);
+      setLassoConfig(null);
+      setMenuConfig(null);
+      const hybridStartPos = path[0];
+      const hybridTargetPos = { x: condition.distance, y: TARGET_POSITION_Y[condition.targetPosition] };
+      setStartButtonPos(hybridStartPos);
+      setTargetPos(hybridTargetPos);
+      setCursorPos(hybridStartPos);
+      cursorPosRef.current = hybridStartPos;
     } else if (condition.tunnelType === 'lasso') {
       const [generatedPath, width, lassoStartPos, lassoEndPos] = generateLassoPath(condition, 0.002);
       path = generatedPath;
@@ -222,11 +260,14 @@ const HumanSteeringExperiment = () => {
       setMenuConfig(null);
     }
     setTunnelPath(path);
+    setTargetRadius(computeTargetRadius(condition));
     setTimeLimit(condition.timeLimit);
     
     // For non-lasso trials, use path endpoints as start/end positions
-    // (Lasso trials already set start/end positions above)
-    if (condition.tunnelType !== 'lasso') {
+    // (Lasso, unconstrained_pointing, and constrained_to_unconstrained trials already set
+    // start/end positions above — the latter two need a target y that differs from the path's
+    // own centerline/endpoint)
+    if (condition.tunnelType !== 'lasso' && condition.tunnelType !== 'unconstrained_pointing' && condition.tunnelType !== 'constrained_to_unconstrained') {
       const startPos = path[0];
       const endPos = path[path.length - 1];
       
@@ -380,9 +421,9 @@ const HumanSteeringExperiment = () => {
         }
       } else {
         // For basic and lasso trials, check if final position is within circular target
-        const targetRadius = currentCondition.tunnelType === 'lasso' ? 0.003 : TARGET_RADIUS;
+        const effectiveTargetRadius = currentCondition.tunnelType === 'lasso' ? 0.003 : targetRadius;
         const targetDist = Math.sqrt((finalPos.x - targetPos.x) ** 2 + (finalPos.y - targetPos.y) ** 2);
-        const isInTargetRegion = targetDist < targetRadius;
+        const isInTargetRegion = targetDist < effectiveTargetRadius;
         
         // Always ensure the trajectory ends within the target region
         if (isInTargetRegion) {
@@ -484,6 +525,7 @@ const HumanSteeringExperiment = () => {
     setCursorVel,
     startButtonPos,
     targetPos,
+    targetRadius,
     tunnelPath,
     tunnelType,
     tunnelWidth,
@@ -563,18 +605,19 @@ const HumanSteeringExperiment = () => {
         canvasDimensions.scale,
         lassoConfig,
         menuConfig,
-        menuHasHoveredRef
+        menuHasHoveredRef,
+        targetRadius
       );
       animationRef.current = requestAnimationFrame(animate);
     };
-    
+
     animationRef.current = requestAnimationFrame(animate);
     return () => {
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [cursorPos, trialState, tunnelPath, startButtonPos, targetPos, tunnelWidth, excursionMarkers, shouldMarkBoundaries, hasExcursionMarker, tunnelType, segmentWidths, canvasDimensions, lassoConfig, menuConfig]);
+  }, [cursorPos, trialState, tunnelPath, startButtonPos, targetPos, targetRadius, tunnelWidth, excursionMarkers, shouldMarkBoundaries, hasExcursionMarker, tunnelType, segmentWidths, canvasDimensions, lassoConfig, menuConfig]);
 
   const handleUploadData = async () => {
     setUploadStatus('uploading');
@@ -697,7 +740,7 @@ const HumanSteeringExperiment = () => {
         return <Instructions onNext={() => {
           setPhase(ExperimentPhase.PRACTICE);
           setIsPractice(true);
-          setupTrial(BASIC_CONDITIONS[0]);
+          setupTrial(PRACTICE_CONDITION);
         }} />;
 
       case ExperimentPhase.LASSO_INSTRUCTIONS:

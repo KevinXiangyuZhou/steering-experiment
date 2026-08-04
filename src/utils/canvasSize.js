@@ -14,9 +14,22 @@ export const getScreenDPI = () => {
   return dpi;
 };
 
+// Extra right-side margin so the end target (radius up to 0.5 * tunnelWidth, max 0.025) never
+// clips at the canvas edge. Scaling targetWidthCm and normalizedWidth by the same factor keeps
+// `scale` (and therefore every existing calibrated cm-scale distance) unchanged — the margin is
+// pure blank canvas space added to the right of the original 0.46-unit tunnel/path coordinate space.
+const RIGHT_MARGIN_FRACTION = 0.065; // ~0.03 normalized units, comfortably exceeds max target radius (0.025)
+
+// The actual normalized coordinate space of the rendered/interactive canvas (post-widening) —
+// this is the real extent the cursor can reach, and is the single source of truth for anything
+// that needs to know the canvas's true bounds (excursion checks, "available area" rendering),
+// not the original pre-widening 0.46/0.26 tunnel/path coordinate space.
+export const NORMALIZED_WIDTH = 0.46 * (1 + RIGHT_MARGIN_FRACTION);
+export const NORMALIZED_HEIGHT = 0.26;
+
 // Calculate canvas dimensions
 export const calculateCanvasDimensions = () => {
-  const targetWidthCm = 46; // 46cm
+  const targetWidthCm = 46 * (1 + RIGHT_MARGIN_FRACTION); // ~49cm
   const targetHeightCm = 26; // 26cm
   
   const dpi = getScreenDPI();
@@ -46,12 +59,7 @@ export const calculateCanvasDimensions = () => {
   canvasWidth = Math.max(canvasWidth, 300);
   canvasHeight = Math.max(canvasHeight, 200);
   
-  // Original normalized coordinates: width 0.46, height 0.26
-  // Scale converts normalized coordinates to pixels
-  const normalizedWidth = 0.46;
-  const normalizedHeight = 0.26;
-  
-  const scale = canvasWidth / normalizedWidth;
+  const scale = canvasWidth / NORMALIZED_WIDTH;
   
   return {
     width: Math.round(canvasWidth),

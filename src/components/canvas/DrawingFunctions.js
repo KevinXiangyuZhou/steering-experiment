@@ -1,7 +1,17 @@
-import { 
-  START_BUTTON_RADIUS, 
-  TARGET_RADIUS 
+import {
+  START_BUTTON_RADIUS,
+  TARGET_RADIUS
 } from '../../constants/experimentConstants.js';
+import { NORMALIZED_WIDTH, NORMALIZED_HEIGHT } from '../../utils/canvasSize.js';
+
+// Fill a rectangular region with the same gray used for tunnel corridors, so participants can see
+// exactly where the cursor is allowed to go — used for trials (or portions of trials) with no
+// walled corridor, where the reachable area is otherwise invisible.
+export const drawUnconstrainedArea = (ctx, bounds, scale) => {
+  const { left, right, top, bottom } = bounds;
+  ctx.fillStyle = '#CCCCCC';
+  ctx.fillRect(left * scale, top * scale, (right - left) * scale, (bottom - top) * scale);
+};
 
 export const drawTunnel = (ctx, tunnelPath, tunnelType, tunnelWidth, segmentWidths, scale) => {
   // Draw original walls first (gray), then gray rectangles on top, then black outer edges
@@ -126,7 +136,69 @@ export const drawTunnel = (ctx, tunnelPath, tunnelType, tunnelWidth, segmentWidt
       ctx.closePath();
       ctx.fill();
     }
-    
+
+  } else if (tunnelType === 'constrained_to_unconstrained') {
+    // Only the first half (the real corridor, width = segmentWidths[0]) gets walls/fill; the
+    // second half is open — no walls, but still filled gray so participants can see the reachable
+    // area (matches the canvas-rectangle bounds enforced in useMouseHandler.js).
+    //
+    // The corridor's walls/fill include the boundary point itself (endIndex, inclusive) so the
+    // walls visibly reach the open area rather than stopping short. The open-area fill starts
+    // slightly *before* the boundary (one path-step of overlap) rather than exactly at it — the
+    // rect-based fillRect() and the corridor's path-based fill() can antialias fractional-pixel
+    // edges very slightly differently, so touching exactly can still leave a hairline gap;
+    // deliberately overlapping is immune to that since both fills are the same solid gray.
+    const segmentLength = tunnelPath.length / 2;
+    const endIndex = Math.min(Math.floor(segmentLength), tunnelPath.length - 1);
+    const halfWidth = segmentWidths[0] / 2;
+
+    const boundaryX = tunnelPath[endIndex].x;
+    const openAreaLeft = tunnelPath[Math.max(0, endIndex - 1)].x;
+    drawUnconstrainedArea(ctx, { left: openAreaLeft, right: NORMALIZED_WIDTH, top: 0, bottom: NORMALIZED_HEIGHT }, scale);
+
+    const fillPath = [];
+    for (let i = 0; i <= endIndex; i++) {
+      const point = tunnelPath[i];
+      const x = point.x * scale;
+      fillPath.push({ x, y: (point.y - halfWidth) * scale });
+    }
+    for (let i = endIndex; i >= 0; i--) {
+      const point = tunnelPath[i];
+      const x = point.x * scale;
+      fillPath.push({ x, y: (point.y + halfWidth) * scale });
+    }
+
+    ctx.beginPath();
+    for (let i = 0; i <= endIndex; i++) {
+      const point = tunnelPath[i];
+      const x = point.x * scale;
+      const upperY = (point.y - halfWidth) * scale;
+      if (i === 0) ctx.moveTo(x, upperY);
+      else ctx.lineTo(x, upperY);
+    }
+    ctx.stroke();
+
+    ctx.beginPath();
+    for (let i = 0; i <= endIndex; i++) {
+      const point = tunnelPath[i];
+      const x = point.x * scale;
+      const lowerY = (point.y + halfWidth) * scale;
+      if (i === 0) ctx.moveTo(x, lowerY);
+      else ctx.lineTo(x, lowerY);
+    }
+    ctx.stroke();
+
+    ctx.fillStyle = '#CCCCCC';
+    if (fillPath.length > 0) {
+      ctx.beginPath();
+      ctx.moveTo(fillPath[0].x, fillPath[0].y);
+      for (let i = 1; i < fillPath.length; i++) {
+        ctx.lineTo(fillPath[i].x, fillPath[i].y);
+      }
+      ctx.closePath();
+      ctx.fill();
+    }
+
   } else if (tunnelType === 'corner') {
     // Draw axis-aligned corridor with hard 90° corners (no chamfers, fillets, or diagonal edges)
     const halfWidth = tunnelWidth / 2;
@@ -1001,7 +1073,8 @@ export const drawCanvas = (
   scale,
   lassoConfig = null,
   menuConfig = null,
-  menuHasHoveredRef = null
+  menuHasHoveredRef = null,
+  targetRadius = null
 ) => {
   ctx.clearRect(0, 0, canvasWidth, canvasHeight);
   
@@ -1009,6 +1082,10 @@ export const drawCanvas = (
   // Draw tunnel BEFORE menu/grid/buttons so they appear on top
   if (tunnelPath.length > 0 && tunnelType !== 'lasso' && tunnelType !== 'cascading_menu') {
     drawTunnel(ctx, tunnelPath, tunnelType, tunnelWidth, segmentWidths, scale);
+  } else if (tunnelType === 'unconstrained_pointing') {
+    // No tunnel path at all — fill the whole reachable area so it's visually obvious where the
+    // cursor can go, matching the canvas-rectangle bounds enforced in useMouseHandler.js.
+    drawUnconstrainedArea(ctx, { left: 0, right: NORMALIZED_WIDTH, top: 0, bottom: NORMALIZED_HEIGHT }, scale);
   }
   
   // Draw lasso visual guides and grid (if lasso tunnel type)
@@ -1060,7 +1137,7 @@ export const drawCanvas = (
     }
     
     // Draw target (normal size for non-lasso, non-menu trials)
-    drawTarget(ctx, targetPos, scale);
+    drawTarget(ctx, targetPos, scale, targetRadius);
   }
   
   // Draw cursor last so it appears on top of everything

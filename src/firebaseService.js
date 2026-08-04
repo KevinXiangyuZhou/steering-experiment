@@ -13,6 +13,9 @@ const db = getFirestore(app);
  */
 export async function uploadExperimentData(experimentData) {
   try {
+    // TEMP: measure real upload payload size against Firestore's 1,048,576-byte document limit
+    console.log('[SIZE CHECK] upload payload:', JSON.stringify(experimentData).length, 'bytes (limit: 1,048,576)');
+
     // Add timestamp and upload to Firestore
     const dataWithTimestamp = {
       ...experimentData,
@@ -20,7 +23,7 @@ export async function uploadExperimentData(experimentData) {
       version: '2.0' // Version of the experiment
     };
 
-    const docRef = await addDoc(collection(db, 'study-mar-26'), dataWithTimestamp);
+    const docRef = await addDoc(collection(db, 'study-aug-26'), dataWithTimestamp);
     console.log('Data uploaded successfully with ID:', docRef.id);
     return docRef.id;
   } catch (error) {
@@ -58,6 +61,25 @@ export async function uploadExperimentDataWithRetry(experimentData, maxRetries =
 }
 
 /**
+ * Uploads multiple documents (a session doc + its trial chunks), each with its own independent
+ * retry (via uploadExperimentDataWithRetry) so an already-succeeded document is never re-uploaded
+ * on a later failure — addDoc always creates a new document rather than upserting, so re-attempting
+ * a succeeded document would create a duplicate.
+ * @param {Object[]} documents - Documents to upload; the first is treated as the session document.
+ * @returns {Promise<string>} - Document ID of the session document.
+ */
+export async function uploadSessionDocuments(documents) {
+  const results = await Promise.allSettled(documents.map(doc => uploadExperimentDataWithRetry(doc)));
+  const failed = results.filter(r => r.status === 'rejected');
+  if (failed.length > 0) {
+    throw new Error(
+      `Failed to upload ${failed.length} of ${documents.length} document(s). ${failed[0].reason?.message || ''}`
+    );
+  }
+  return results[0].value;
+}
+
+/**
  * Check if Firebase is properly configured
  * @returns {boolean} - True if Firebase is configured
  */
@@ -72,9 +94,9 @@ export function isFirebaseConfigured() {
  */
 export async function downloadAllExperimentData() {
   try {
-    const q = query(collection(db, 'study-mar-26'), orderBy('uploadedAt', 'desc'));
+    const q = query(collection(db, 'study-aug-26'), orderBy('uploadedAt', 'desc'));
     const querySnapshot = await getDocs(q);
-    
+
     const allData = [];
     querySnapshot.forEach((doc) => {
       const data = doc.data();
@@ -87,8 +109,8 @@ export async function downloadAllExperimentData() {
         ...data
       });
     });
-    
-    console.log(`Downloaded ${allData.length} documents from user_study_results`);
+
+    console.log(`Downloaded ${allData.length} documents from study-aug-26`);
     return allData;
   } catch (error) {
     console.error('Error downloading data from Firebase:', error);

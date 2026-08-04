@@ -28,9 +28,9 @@ async function downloadAllData() {
   try {
     console.log('Connecting to Firebase...');
     
-    const q = query(collection(db, 'study-mar-26'), orderBy('uploadedAt', 'desc'));
+    const q = query(collection(db, 'study-aug-26'), orderBy('uploadedAt', 'desc'));
     const querySnapshot = await getDocs(q);
-    
+
     const allData = [];
     querySnapshot.forEach((doc) => {
       const data = doc.data();
@@ -43,8 +43,8 @@ async function downloadAllData() {
         ...data
       });
     });
-    
-    console.log(`Downloaded ${allData.length} documents from study-mar-26`);
+
+    console.log(`Downloaded ${allData.length} documents from study-aug-26`);
     
     // Create output directory if it doesn't exist
     const outputDir = path.join(__dirname, 'data');

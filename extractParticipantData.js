@@ -20,11 +20,36 @@ function extractParticipantData(inputFile, outputDir) {
     }
     
     console.log(`Found ${data.length} documents`);
-    
-    // Group data by participantId
+
+    // Sessions may now be split across a session document + N trial-chunk documents (Firestore's
+    // 1 MiB per-document limit), linked by a shared sessionId. Reassemble them into complete
+    // session objects before grouping by participant. Documents without a docType are pre-chunking
+    // (legacy) documents that already have the full shape — pass them through unchanged.
+    const sessionDocs = data.filter((doc) => doc.docType === 'session');
+    const chunkDocs = data.filter((doc) => doc.docType === 'trialChunk');
+    const legacyDocs = data.filter((doc) => !doc.docType);
+
+    const chunksBySessionId = new Map();
+    chunkDocs.forEach((chunk) => {
+      if (!chunksBySessionId.has(chunk.sessionId)) {
+        chunksBySessionId.set(chunk.sessionId, []);
+      }
+      chunksBySessionId.get(chunk.sessionId).push(chunk);
+    });
+
+    const reassembledSessions = sessionDocs.map((sessionDoc) => {
+      const chunks = (chunksBySessionId.get(sessionDoc.sessionId) || [])
+        .sort((a, b) => a.chunkIndex - b.chunkIndex);
+      return { ...sessionDoc, trialData: chunks.flatMap((chunk) => chunk.trialData) };
+    });
+
+    const allSessions = [...reassembledSessions, ...legacyDocs];
+    console.log(`Reassembled ${reassembledSessions.length} session(s) from ${sessionDocs.length} session doc(s) + ${chunkDocs.length} chunk doc(s); ${legacyDocs.length} legacy document(s) passed through unchanged`);
+
+    // Group sessions by participantId
     const participantsMap = new Map();
-    
-    data.forEach((doc) => {
+
+    allSessions.forEach((doc) => {
       const participantId = doc.participantId;
       
       if (!participantId) {

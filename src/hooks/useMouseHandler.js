@@ -1,7 +1,16 @@
 import { useRef, useCallback } from 'react';
-import { TrialState, START_BUTTON_RADIUS, TARGET_RADIUS } from '../constants/experimentConstants.js';
+import { TrialState, START_BUTTON_RADIUS } from '../constants/experimentConstants.js';
 import { ExperimentPhase } from '../constants/experimentConstants.js';
-import { checkTunnelExcursions, checkLassoGrayIconCollision, checkCascadingMenuExcursion, checkLassoShortcut } from '../utils/excursionChecker.js';
+import { checkTunnelExcursions, checkLassoGrayIconCollision, checkCascadingMenuExcursion, checkLassoShortcut, checkCanvasBoundsExcursion } from '../utils/excursionChecker.js';
+import { NORMALIZED_WIDTH, NORMALIZED_HEIGHT } from '../utils/canvasSize.js';
+
+// Canvas-rectangle bounds for trials with no tunnel corridor (unconstrained pointing, and the
+// open half of constrained-to-unconstrained pointing) — matches the actual rendered/interactive
+// canvas extent (post-widening), not the pre-widening 0.46/0.26 tunnel/path coordinate space.
+// Using the narrower pre-widening bounds here was a bug: the target sits at x=0.459, so a bound
+// of 0.46 left almost no margin and routine movement near the target could falsely trigger an
+// "out of bounds" excursion inside what visually looks like open canvas.
+const UNCONSTRAINED_BOUNDS = { left: 0, right: NORMALIZED_WIDTH, top: 0, bottom: NORMALIZED_HEIGHT };
 
 export const useMouseHandler = ({
   phase,
@@ -12,6 +21,7 @@ export const useMouseHandler = ({
   setCursorVel,
   startButtonPos,
   targetPos,
+  targetRadius,
   tunnelPath,
   tunnelType,
   tunnelWidth,
@@ -46,21 +56,31 @@ export const useMouseHandler = ({
       return;
     }
     
-    if (trialState !== TrialState.WAITING_FOR_START) return;
-    
     const rect = event.currentTarget.getBoundingClientRect();
     const x = (event.clientX - rect.left) / scale;
     const y = (event.clientY - rect.top) / scale;
-    
-    const distance = Math.sqrt((x - startButtonPos.x) ** 2 + (y - startButtonPos.y) ** 2);
-    
-    // Use smaller radius for lasso and cascading menu trials
-    const buttonRadius = (tunnelType === 'lasso' || tunnelType === 'cascading_menu') ? 0.003 : START_BUTTON_RADIUS;
-    
-    if (distance <= buttonRadius) {
-      onStartTrial();
+
+    if (trialState === TrialState.WAITING_FOR_START) {
+      const distance = Math.sqrt((x - startButtonPos.x) ** 2 + (y - startButtonPos.y) ** 2);
+
+      // Use smaller radius for lasso and cascading menu trials
+      const buttonRadius = (tunnelType === 'lasso' || tunnelType === 'cascading_menu') ? 0.003 : START_BUTTON_RADIUS;
+
+      if (distance <= buttonRadius) {
+        onStartTrial();
+      }
+    } else if (trialState === TrialState.IN_PROGRESS) {
+      // Trial only completes on an explicit click at the target (not proximity/hover)
+      const targetDist = Math.sqrt((x - targetPos.x) ** 2 + (y - targetPos.y) ** 2);
+
+      // Use smaller radius for lasso trials
+      const effectiveTargetRadius = tunnelType === 'lasso' ? 0.003 : targetRadius;
+
+      if (targetDist < effectiveTargetRadius) {
+        onTrialComplete(true);
+      }
     }
-  }, [phase, trialState, startButtonPos, tunnelType, onStartTrial, scale]);
+  }, [phase, trialState, startButtonPos, targetPos, targetRadius, tunnelType, onStartTrial, onTrialComplete, scale]);
 
   const handleMouseMove = useCallback((event) => {
     if (![
@@ -222,6 +242,35 @@ export const useMouseHandler = ({
         setTrialState(TrialState.FAILED);
         return; // Don't continue processing this movement
       }
+    } else if (tunnelType === 'unconstrained_pointing' || tunnelType === 'constrained_to_unconstrained') {
+      // Unconstrained pointing has no tunnel at all (checkTunnelExcursions is a no-op on an empty
+      // path). Constrained-to-unconstrained has a real corridor in its first half (handled by
+      // checkTunnelExcursions) and an open second half — both types are bounded by the canvas
+      // rectangle everywhere, which checkTunnelExcursions has no way to express.
+      const tunnelResult = tunnelPath.length
+        ? checkTunnelExcursions(x, y, tunnelPath, tunnelType, tunnelWidth, segmentWidths)
+        : { isExcursion: false };
+      const canvasResult = checkCanvasBoundsExcursion(x, y, UNCONSTRAINED_BOUNDS);
+      const excursionResult = tunnelResult.isExcursion ? tunnelResult : canvasResult;
+
+      if (excursionResult.isExcursion && !hasExcursionMarker) {
+        setExcursionMarkers([excursionResult.boundaryPoint]);
+        setHasExcursionMarker(true);
+
+        const excursion = {
+          position: { x, y },
+          distanceOutside: excursionResult.distanceOutside,
+          timestamp: currentTime,
+          boundaryPoint: excursionResult.boundaryPoint
+        };
+        setExcursionEvents(prev => [...prev, excursion]);
+
+        if (shouldEnforceBoundaries()) {
+          setTrialState(TrialState.FAILED);
+          return; // Don't continue processing this movement
+        }
+        // In practice mode, just mark the excursion and continue
+      }
     } else if (shouldMarkBoundaries()) {
       // For non-lasso trials, check tunnel boundary excursions
       const excursionResult = checkTunnelExcursions(x, y, tunnelPath, tunnelType, tunnelWidth, segmentWidths);
@@ -249,7 +298,8 @@ export const useMouseHandler = ({
       }
     }
     
-    // Check for trial completion
+    // Check for trial completion (cascading menu only — non-menu trials complete via
+    // an explicit click on the target, handled in handleMouseClick above)
     if (tunnelType === 'cascading_menu' && menuConfig) {
       // For cascading menu, check if cursor is within target submenu item
       // Submenu only appears when hovering over target main menu item
@@ -307,17 +357,8 @@ export const useMouseHandler = ({
           onTrialComplete(true);
         }
       }
-    } else {
-      // Standard target completion check
-      const targetDist = Math.sqrt((x - targetPos.x) ** 2 + (y - targetPos.y) ** 2);
-      
-      // Use smaller radius for lasso trials
-      const targetRadius = tunnelType === 'lasso' ? 0.003 : TARGET_RADIUS;
-      
-      if (targetDist < targetRadius) {
-        onTrialComplete(true);
-      }
     }
+    // Non-menu trials complete only on an explicit click on the target (see handleMouseClick)
     
     // Store last position for next calculation
     lastMousePosRef.current = { x, y };
